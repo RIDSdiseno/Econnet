@@ -6,55 +6,110 @@ import {
   SafetyCertificateOutlined,
   EnvironmentOutlined,
   CustomerServiceOutlined,
-} from '@ant-design/icons'
+} from "@ant-design/icons";
+import { Link } from "react-router-dom";
+
+const redesSociales = {
+  instagram: "#",
+  facebook: "#",
+  linkedin: "#",
+};
+
+const footerSections = [
+  {
+    title: "Ayuda",
+    links: [
+      {
+        label: "Centro de ayuda",
+        to: "/centro-ayuda",
+      },
+      {
+        label: "Seguimiento de mi compra",
+        to: "/seguimiento-compra",
+      },
+      {
+        label: "Formulario de contacto",
+        to: "/contacto",
+      },
+    ],
+  },
+  {
+    title: "Nosotros",
+    links: [
+      {
+        label: "Quiénes somos",
+        to: "/quienes-somos",
+      },
+
+      {
+        label: "Términos y condiciones",
+        to: "/terminos-condiciones",
+      },
+      {
+        label: "Políticas de privacidad",
+        to: "/politicas-privacidad",
+      },
+    ],
+  },
+  {
+    title: "Comunidad",
+    links: [
+      {
+        label: "Instagram",
+        href: redesSociales.instagram,
+        external: true,
+      },
+      {
+        label: "Facebook",
+        href: redesSociales.facebook,
+        external: true,
+      },
+      {
+        label: "LinkedIn",
+        href: redesSociales.linkedin,
+        external: true,
+      },
+    ],
+  },
+];
 
 function Footer() {
   return (
     <footer className="bg-gray-950 text-white mt-12">
       <div className="max-w-7xl mx-auto px-8 py-10">
-        
         {/* Primera fila: columnas principales */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          
-          <div>
-            <h3 className="border-l-4 border-gray-400 pl-2 font-bold text-lg mb-4">
-              Ayuda
-            </h3>
+          {footerSections.map((section) => (
+            <div key={section.title}>
+              <h3 className="border-l-4 border-gray-400 pl-2 font-bold text-lg mb-4">
+                {section.title}
+              </h3>
 
-            <ul className="space-y-3 text-sm text-gray-200">
-              <li className="hover:text-white cursor-pointer">Centro de ayuda</li>
-              <li className="hover:text-white cursor-pointer">Seguimiento de mi compra</li>
-              <li className="hover:text-white cursor-pointer">Formulario de contacto</li>
-              <li className="hover:text-white cursor-pointer">Bases de concursos</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="border-l-4 border-gray-400 pl-2 font-bold text-lg mb-4">
-              Nosotros
-            </h3>
-
-            <ul className="space-y-3 text-sm text-gray-200">
-              <li className="hover:text-white cursor-pointer">Quiénes somos</li>
-              <li className="hover:text-white cursor-pointer">Ventas corporativas</li>
-              <li className="hover:text-white cursor-pointer">Ecomer Rids Labs</li>
-              <li className="hover:text-white cursor-pointer">Términos y condiciones</li>
-              <li className="hover:text-white cursor-pointer">Políticas de privacidad</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="border-l-4 border-gray-400 pl-2 font-bold text-lg mb-4">
-              Comunidad
-            </h3>
-
-            <ul className="space-y-3 text-sm text-gray-200">
-              <li className="hover:text-white cursor-pointer">Instagram</li>
-              <li className="hover:text-white cursor-pointer">Facebook</li>
-              <li className="hover:text-white cursor-pointer">LinkedIn</li>
-              <li className="hover:text-white cursor-pointer">YouTube</li>
-            </ul>
-          </div>
+              <ul className="space-y-3 text-sm text-gray-200">
+                {section.links.map((link) => (
+                  <li key={link.label}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-white transition"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={link.to}
+                        className="hover:text-white transition"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         {/* Separador */}
@@ -77,7 +132,6 @@ function Footer() {
 
         {/* Tercera fila: seguridad, dirección y redes */}
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
-          
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 border-2 border-gray-400 rounded-xl flex items-center justify-center">
               <EnvironmentOutlined className="text-2xl text-gray-300" />
@@ -93,33 +147,40 @@ function Footer() {
             <SafetyCertificateOutlined className="text-4xl text-gray-300" />
 
             <p className="text-sm text-gray-200">
-              Econnet protege tu información con{' '}
+              Econnet protege tu información con{" "}
               <strong>Secure Sockets Layer SSL</strong>
             </p>
           </div>
 
           <div className="lg:text-right">
             <div className="flex lg:justify-end gap-3 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer">
+              <a
+                href={redesSociales.instagram}
+                target="_blank"
+                rel="noreferrer"
+                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer"
+              >
                 <InstagramOutlined />
-              </div>
+              </a>
 
-              <div className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer">
+              <a
+                href={redesSociales.facebook}
+                target="_blank"
+                rel="noreferrer"
+                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer"
+              >
                 <FacebookFilled />
-              </div>
+              </a>
 
-              <div className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer">
+              <a
+                href={redesSociales.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer"
+              >
                 <LinkedinFilled />
-              </div>
-
-              <div className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer">
-                <YoutubeFilled />
-              </div>
+              </a>
             </div>
-
-            
-
-            
           </div>
         </div>
 
@@ -135,7 +196,7 @@ function Footer() {
         <span className="font-semibold">¿Necesitas ayuda?</span>
       </button>
     </footer>
-  )
+  );
 }
 
-export default Footer
+export default Footer;
