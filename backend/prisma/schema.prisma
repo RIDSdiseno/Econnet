@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Categoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique
+  slug        String     @unique
+  descripcion String?
+  activo      Boolean    @default(true)
+
+  productos   Producto[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("categorias")
+}
+
+model Marca {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique
+  activo    Boolean    @default(true)
+
+  productos Producto[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("marcas")
+}
+
+model Producto {
+  id          Int      @id @default(autoincrement())
+
+  nombre      String
+  slug        String   @unique
+  descripcion String?
+  precio      Int
+  stock       Int      @default(0)
+  sku         String?  @unique
+  modelo      String?
+  garantia    String?
+  activo      Boolean  @default(true)
+
+  categoriaId Int
+  marcaId     Int?
+
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+  marca       Marca?    @relation(fields: [marcaId], references: [id], onDelete: SetNull)
+
+  imagenes        ProductoImagen[]
+  especificaciones EspecificacionProducto[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("productos")
+}
+
+model ProductoImagen {
+  id          Int      @id @default(autoincrement())
+  productoId  Int
+
+  url         String
+  publicId    String?
+  esPrincipal Boolean  @default(false)
+  orden       Int      @default(0)
+
+  producto    Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("producto_imagenes")
+}
+
+model EspecificacionProducto {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+
+  nombre     String
+  valor      String
+  orden      Int      @default(0)
+
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("producto_especificaciones")
+}
