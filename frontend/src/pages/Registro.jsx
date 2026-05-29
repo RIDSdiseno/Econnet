@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button, Checkbox, Input, Select, Divider, message } from "antd";
+import { Button, Checkbox, Input, Divider, message } from "antd";
 import {
   MailOutlined,
   UserOutlined,
@@ -10,15 +10,17 @@ import {
   ArrowLeftOutlined,
   CustomerServiceOutlined,
 } from "@ant-design/icons";
+import { useAuth } from "../context/AuthContext";
 
 function Registro() {
   const navigate = useNavigate();
+  const { registrar } = useAuth();
+  const [cargando, setCargando] = useState(false);
 
   const [formulario, setFormulario] = useState({
     correo: "",
     nombre: "",
     apellidos: "",
-    tipoDocumento: "RUT",
     documento: "",
     celular: "",
     password: "",
@@ -52,25 +54,37 @@ function Registro() {
     formulario.aceptaTerminos &&
     Object.values(passwordValida).every(Boolean);
 
-  const registrarUsuario = () => {
+  const registrarUsuario = async () => {
     if (!puedeRegistrarse) {
       message.warning("Completa los campos obligatorios correctamente");
       return;
     }
 
-    message.success("Registro realizado correctamente");
+    try {
+      setCargando(true);
 
-    setTimeout(() => {
-      navigate("/");
-    }, 800);
+      await registrar({
+        nombre: `${formulario.nombre} ${formulario.apellidos}`.trim(),
+        email: formulario.correo,
+        password: formulario.password,
+        telefono: `+56${formulario.celular}`,
+        rut: formulario.documento,
+        aceptaTerminos: formulario.aceptaTerminos,
+        aceptaPromociones: formulario.aceptaPromociones,
+        aceptaPublicidad: formulario.aceptaPublicidad,
+      });
+
+      message.success("Registro realizado correctamente");
+      navigate("/mi-cuenta");
+    } catch (error) {
+      message.error(error.message || "No se pudo registrar el usuario");
+    } finally {
+      setCargando(false);
+    }
   };
 
   const registrarConGoogle = () => {
-    message.success("Registro con Google realizado correctamente");
-
-    setTimeout(() => {
-      navigate("/");
-    }, 800);
+    message.info("Registro con Google pendiente de conectar al backend");
   };
 
   return (
@@ -223,27 +237,13 @@ function Registro() {
 
                   <div>
                     <label className="text-sm font-bold text-gray-800">
-                      Documento
+                      RUN/RUT
                     </label>
 
                     <Input
                       size="large"
-                      placeholder="Ingresa tu documento"
+                      placeholder="Ingresa tu RUN/RUT"
                       prefix={<IdcardOutlined className="text-gray-400" />}
-                      addonBefore={
-                        <Select
-                          value={formulario.tipoDocumento}
-                          onChange={(value) =>
-                            actualizarCampo("tipoDocumento", value)
-                          }
-                          options={[
-                            { value: "RUT", label: "RUT" },
-                            { value: "DNI", label: "DNI" },
-                            { value: "PASAPORTE", label: "Pasaporte" },
-                          ]}
-                          className="w-28"
-                        />
-                      }
                       value={formulario.documento}
                       onChange={(e) =>
                         actualizarCampo("documento", e.target.value)
@@ -398,7 +398,8 @@ function Registro() {
                 <Button
                   block
                   size="large"
-                  disabled={!puedeRegistrarse}
+                  loading={cargando}
+                  disabled={!puedeRegistrarse || cargando}
                   onClick={registrarUsuario}
                   className="!h-14 !mt-8 !rounded-2xl !font-black disabled:!bg-gray-100 disabled:!text-gray-400 enabled:!bg-gray-950 enabled:!text-white enabled:!border-gray-950 hover:enabled:!bg-black"
                 >

@@ -7,6 +7,7 @@ import categoriaRoutes from "./routes/categoriaRoutes.js";
 import marcaRoutes from "./routes/marcaRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import anuncioRoutes from "./routes/anuncioRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/api/categorias", categoriaRoutes);
 app.use("/api/marcas", marcaRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/anuncios", anuncioRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend de Econnet funcionando correctamente");

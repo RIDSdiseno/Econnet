@@ -7,15 +7,19 @@ import {
   CustomerServiceOutlined,
   ArrowLeftOutlined,
 } from "@ant-design/icons";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [cargando, setCargando] = useState(false);
 
-  const iniciarSesion = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const iniciarSesion = async () => {
     if (!correo.trim()) {
-      message.warning("Ingresa tu correo o usuario");
+      message.warning("Ingresa tu correo");
       return;
     }
 
@@ -24,11 +28,21 @@ function Login() {
       return;
     }
 
-    message.success("Inicio de sesión correcto");
+    try {
+      setCargando(true);
 
-    setTimeout(() => {
+      await login({
+        email: correo,
+        password,
+      });
+
+      message.success("Inicio de sesión correcto");
       navigate("/mi-cuenta");
-    }, 800);
+    } catch (error) {
+      message.error(error.message || "No se pudo iniciar sesión");
+    } finally {
+      setCargando(false);
+    }
   };
 
   const iniciarConGoogle = () => {
@@ -144,6 +158,7 @@ function Login() {
                     prefix={<LockOutlined className="text-gray-400" />}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onPressEnter={iniciarSesion}
                     className="!h-14 !rounded-xl !text-base"
                   />
                 </div>
@@ -160,6 +175,7 @@ function Login() {
                 <Button
                   block
                   size="large"
+                  loading={cargando}
                   onClick={iniciarSesion}
                   className="!h-14 !mt-6 !rounded-2xl !bg-gray-950 !text-white !border-gray-950 !font-black hover:!bg-black"
                 >

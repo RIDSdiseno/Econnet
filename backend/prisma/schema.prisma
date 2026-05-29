@@ -121,3 +121,25 @@ model Anuncio {
 
   @@map("anuncios")
 }
+
+model Usuario {
+  id                Int      @id @default(autoincrement())
+
+  nombre            String
+  email             String   @unique
+  passwordHash      String
+  telefono          String?
+  rut               String?  @unique
+
+  aceptaTerminos    Boolean  @default(false)
+  aceptaPromociones Boolean  @default(false)
+  aceptaPublicidad  Boolean  @default(false)
+
+  rol               String   @default("cliente")
+  activo            Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("usuarios")
+}

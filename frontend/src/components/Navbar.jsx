@@ -4,8 +4,10 @@ import {
   UserOutlined,
   ShoppingCartOutlined,
   MenuOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const categoriasRapidas = [
   {
@@ -19,9 +21,7 @@ const categoriasRapidas = [
   {
     key: "2",
     label: (
-      <Link to={`/productos?categoria=${encodeURIComponent("AIO")}`}>
-        AIO
-      </Link>
+      <Link to={`/productos?categoria=${encodeURIComponent("AIO")}`}>AIO</Link>
     ),
   },
   {
@@ -35,7 +35,11 @@ const categoriasRapidas = [
   {
     key: "4",
     label: (
-      <Link to={`/productos?categoria=${encodeURIComponent("Cámara de seguridad")}`}>
+      <Link
+        to={`/productos?categoria=${encodeURIComponent(
+          "Cámara de seguridad"
+        )}`}
+      >
         Cámaras de seguridad
       </Link>
     ),
@@ -51,6 +55,44 @@ const categoriasRapidas = [
 ];
 
 function Navbar() {
+  const navigate = useNavigate();
+  const { usuario, estaLogueado, logout, cargandoAuth } = useAuth();
+
+  const primerNombre = usuario?.nombre?.split(" ")[0] || "Usuario";
+
+  const cerrarSesion = () => {
+    logout();
+    navigate("/");
+  };
+
+  const menuUsuario = [
+    {
+      key: "mi-cuenta",
+      label: <Link to="/mi-cuenta">Mi cuenta</Link>,
+    },
+    {
+      key: "pedidos",
+      label: <Link to="/mi-cuenta">Mis pedidos</Link>,
+    },
+    {
+      type: "divider",
+    },
+    {
+      key: "logout",
+      danger: true,
+      label: (
+        <button
+          type="button"
+          onClick={cerrarSesion}
+          className="w-full text-left flex items-center gap-2"
+        >
+          <LogoutOutlined />
+          Cerrar sesión
+        </button>
+      ),
+    },
+  ];
+
   return (
     <header className="w-full">
       {/* Barra superior */}
@@ -95,18 +137,54 @@ function Navbar() {
           </Dropdown>
 
           {/* Usuario */}
-          <Link
-            to="/login"
-            className="hidden md:flex items-center gap-3 border-l border-gray-600 pl-6 hover:text-gray-300 transition"
-          >
-            <UserOutlined className="text-3xl text-white" />
+          {cargandoAuth ? (
+            <div className="hidden md:flex items-center gap-3 border-l border-gray-600 pl-6">
+              <UserOutlined className="text-3xl text-white" />
 
-            <div className="leading-tight">
-              <span className="text-sm font-semibold text-white">
-                Inicia sesión
-              </span>
+              <div className="leading-tight">
+                <span className="text-sm font-semibold text-white">
+                  Cargando...
+                </span>
+              </div>
             </div>
-          </Link>
+          ) : estaLogueado ? (
+            <Dropdown
+              menu={{ items: menuUsuario }}
+              trigger={["click"]}
+              placement="bottomRight"
+            >
+              <button className="hidden md:flex items-center gap-3 border-l border-gray-600 pl-6 hover:text-gray-300 transition">
+                <UserOutlined className="text-3xl text-white" />
+
+                <div className="leading-tight text-left">
+                  <span className="block text-xs text-gray-300">Hola,</span>
+                  <span className="text-sm font-semibold text-white">
+                    {primerNombre}
+                  </span>
+                </div>
+              </button>
+            </Dropdown>
+          ) : (
+            <div className="hidden md:flex items-center gap-3 border-l border-gray-600 pl-6">
+              <UserOutlined className="text-3xl text-white" />
+
+              <div className="leading-tight">
+                <Link
+                  to="/login"
+                  className="block text-sm font-semibold text-white hover:text-gray-300"
+                >
+                  Inicia sesión
+                </Link>
+
+                <Link
+                  to="/registro"
+                  className="block text-xs text-emerald-300 hover:text-emerald-200"
+                >
+                  Regístrate
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Carrito */}
           <Link

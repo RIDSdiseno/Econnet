@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Modal, Input, message } from "antd";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { useAuth } from "../context/AuthContext";
 
 const pedidosUsuario = [
   {
@@ -69,15 +70,10 @@ const menuCuenta = [
 
 function MiCuenta() {
   const navigate = useNavigate();
+  const { usuario, cargandoAuth, estaLogueado, logout } = useAuth();
+
   const [seccionActiva, setSeccionActiva] = useState("datos");
   const [modalDireccion, setModalDireccion] = useState(false);
-
-  const [usuario, setUsuario] = useState({
-    nombre: "Usuario Econnet",
-    documento: "RUT",
-    celular: "+56 9 1234 5678",
-    correo: "usuario@econnet.cl",
-  });
 
   const [direcciones, setDirecciones] = useState([
     {
@@ -99,7 +95,15 @@ function MiCuenta() {
     comuna: "",
   });
 
+  useEffect(() => {
+    if (!cargandoAuth && !estaLogueado) {
+      message.warning("Debes iniciar sesión para acceder a tu cuenta");
+      navigate("/login");
+    }
+  }, [cargandoAuth, estaLogueado, navigate]);
+
   const cerrarSesion = () => {
+    logout();
     message.success("Sesión cerrada");
     navigate("/");
   };
@@ -141,6 +145,28 @@ function MiCuenta() {
       })),
     );
   };
+
+  if (cargandoAuth) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <Navbar />
+
+        <main className="max-w-7xl mx-auto px-8 py-20 text-center">
+          <h1 className="text-2xl font-black text-gray-900">
+            Cargando tu cuenta...
+          </h1>
+
+          <p className="text-gray-600 mt-2">Estamos validando tu sesión.</p>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!estaLogueado || !usuario) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -236,15 +262,19 @@ function MiCuenta() {
                   </div>
 
                   <div className="border-b border-gray-200 pb-5 mb-5">
-                    <p className="font-bold text-gray-900">Tipo de documento</p>
-                    <p className="text-gray-600 mt-1">{usuario.documento}</p>
+                    <p className="font-bold text-gray-900">RUN/RUT</p>
+                    <p className="text-gray-600 mt-1">
+                      {usuario.rut || "No registrado"}
+                    </p>
                   </div>
 
                   <div className="border-b border-gray-200 pb-5 mb-5">
                     <div className="flex justify-between gap-4">
                       <div>
                         <p className="font-bold text-gray-900">Celular</p>
-                        <p className="text-gray-600 mt-1">{usuario.celular}</p>
+                        <p className="text-gray-600 mt-1">
+                          {usuario.telefono || "No registrado"}
+                        </p>
                       </div>
 
                       <button className="text-sm font-bold underline">
@@ -255,7 +285,7 @@ function MiCuenta() {
 
                   <div>
                     <p className="font-bold text-gray-900">Correo</p>
-                    <p className="text-gray-600 mt-1">{usuario.correo}</p>
+                    <p className="text-gray-600 mt-1">{usuario.email}</p>
                   </div>
                 </div>
               </div>
