@@ -1,133 +1,33 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from "react";
 
-import { Link, useParams } from 'react-router-dom'
-import { Button, Rate, Input, Carousel } from 'antd'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import {
-  LeftOutlined,
-  RightOutlined,
-} from '@ant-design/icons'
+import { Link, useParams } from "react-router-dom";
+import { Button, Rate, Input, Carousel } from "antd";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { obtenerProductoPorId, obtenerProductos } from "../services/api";
 
-const productos = [
-  {
-    id: 1,
-    nombre: 'Notebook HP Victus Gaming AMD Ryzen 7, 24GB RAM, RTX 5050, 1TB SSD',
-    categoria: 'Notebook',
-    marca: 'HP',
-    modelo: 'Victus Gaming',
-    partNumber: 'HP-VIC-R7-RTX5050',
-    precio: 1349480,
-    precioNormal: 1666650,
-    descuento: 19,
-    otrosMedios: 1410214,
-    stockOnline: 'Más de 20 unidades',
-    stockTienda: 'No disponible',
-    garantia: '12 meses',
-    imagenes: [
-      '/img/productos/prueba.png',
-      '/img/productos/prueba2.png',
-      '/img/productos/prueba3.png',
-    ],
-    especificaciones: {
-      SKU: 'NB-HP-001',
-      Marca: 'HP',
-      Modelo: 'Victus Gaming',
-      Procesador: 'AMD Ryzen 7',
-      RAM: '24GB DDR5',
-      Almacenamiento: '1TB SSD',
-      Grafica: 'NVIDIA RTX 5050',
-      Pantalla: '15.6 pulgadas Full HD',
-      Sistema: 'Windows 11 Home',
-      Garantia: '12 meses',
-    },
-    descripcion:
-      'Notebook gamer diseñado para alto rendimiento en juegos, trabajo pesado y multitarea. Cuenta con procesador AMD Ryzen 7, memoria RAM de 24GB, almacenamiento SSD de 1TB y gráfica dedicada RTX 5050 para una experiencia fluida.',
-  },
-  {
-    id: 2,
-    nombre: 'Monitor Gamer ASUS TUF 27 Full HD 180Hz',
-    categoria: 'Monitores',
-    marca: 'ASUS',
-    modelo: 'TUF Gaming',
-    partNumber: 'ASUS-TUF-27',
-    precio: 224990,
-    precioNormal: 299990,
-    descuento: 25,
-    otrosMedios: 239990,
-    stockOnline: 'Disponible',
-    stockTienda: 'Disponible',
-    garantia: '12 meses',
-    imagenes: [
-      '/img/productos/monitor-asus.png',
-      '/img/productos/monitor-asus.png',
-      '/img/productos/monitor-asus.png',
-    ],
-    especificaciones: {
-      SKU: 'MON-ASUS-001',
-      Marca: 'ASUS',
-      Modelo: 'TUF Gaming',
-      Tamano: '27 pulgadas',
-      Resolucion: 'Full HD',
-      Frecuencia: '180Hz',
-      Respuesta: '1ms',
-      Panel: 'IPS',
-      Garantia: '12 meses',
-    },
-    descripcion:
-      'Monitor gamer ASUS TUF ideal para juegos competitivos, con alta tasa de refresco, bajo tiempo de respuesta y excelente calidad de imagen.',
-  },
-  {
-    id: 3,
-    nombre: 'SSD Samsung 1TB NVMe alta velocidad',
-    categoria: 'Almacenamiento',
-    marca: 'Samsung',
-    modelo: 'NVMe 1TB',
-    partNumber: 'SSD-SAM-1TB',
-    precio: 89990,
-    precioNormal: 119990,
-    descuento: 25,
-    otrosMedios: 94990,
-    stockOnline: 'Disponible',
-    stockTienda: 'Disponible',
-    garantia: '6 meses',
-    imagenes: [
-      '/img/productos/.png',
-      '/img/productos/ssd-samsung.png',
-      '/img/productos/ssd-samsung.png',
-    ],
-    especificaciones: {
-      SKU: 'SSD-SAM-001',
-      Marca: 'Samsung',
-      Modelo: 'NVMe 1TB',
-      Capacidad: '1TB',
-      Tipo: 'SSD NVMe',
-      Formato: 'M.2',
-      Uso: 'Notebook / PC',
-      Garantia: '6 meses',
-    },
-    descripcion:
-      'Unidad SSD NVMe de alto rendimiento, ideal para mejorar velocidad de arranque, carga de programas y transferencia de archivos.',
-  },
-]
 function dividirEnGrupos(lista, cantidad) {
-  const grupos = []
+  const grupos = [];
 
   for (let i = 0; i < lista.length; i += cantidad) {
-    grupos.push(lista.slice(i, i + cantidad))
+    grupos.push(lista.slice(i, i + cantidad));
   }
 
-  return grupos
+  return grupos;
 }
 
-function ProductosRelacionadosCarrusel({ productoActual }) {
-  const carouselRef = useRef(null)
+function ProductosRelacionadosCarrusel({
+  productoActual,
+  productosRelacionados = [],
+}) {
+  const carouselRef = useRef(null);
 
-  const relacionados = productos.filter(
-    (producto) => producto.id !== productoActual.id
-  )
+  const relacionados = productosRelacionados.filter(
+    (producto) => producto.id !== productoActual.id,
+  );
 
-  const grupos = dividirEnGrupos(relacionados, 4)
+  const grupos = dividirEnGrupos(relacionados, 4);
 
   return (
     <section className="mt-12">
@@ -159,12 +59,7 @@ function ProductosRelacionadosCarrusel({ productoActual }) {
         </div>
       </div>
 
-      <Carousel
-        ref={carouselRef}
-        dots={false}
-        autoplay
-        autoplaySpeed={4500}
-      >
+      <Carousel ref={carouselRef} dots={false} autoplay autoplaySpeed={4500}>
         {grupos.map((grupo, index) => (
           <div key={index}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -176,7 +71,10 @@ function ProductosRelacionadosCarrusel({ productoActual }) {
                   <Link to={`/producto/${producto.id}`}>
                     <div className="h-40 bg-white flex items-center justify-center p-4">
                       <img
-                        src={producto.imagenes[0]}
+                        src={
+                          producto.imagenes?.[0]?.url ||
+                          "/img/productos/producto.png"
+                        }
                         alt={producto.nombre}
                         className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
                       />
@@ -185,7 +83,7 @@ function ProductosRelacionadosCarrusel({ productoActual }) {
 
                   <div className="p-4 pt-2">
                     <p className="text-sm font-black text-gray-900 uppercase">
-                      {producto.marca}
+                      {producto.marca?.nombre || "Sin marca"}
                     </p>
 
                     <Link to={`/producto/${producto.id}`}>
@@ -221,33 +119,29 @@ function ProductosRelacionadosCarrusel({ productoActual }) {
         ))}
       </Carousel>
     </section>
-  )
+  );
 }
 
 function formatearPrecio(valor) {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
     maximumFractionDigits: 0,
-  }).format(valor)
+  }).format(valor);
 }
 function ValoracionesProducto({ producto }) {
-  const [valoracion, setValoracion] = useState(0)
-  const [comentario, setComentario] = useState('')
+  const [valoracion, setValoracion] = useState(0);
+  const [comentario, setComentario] = useState("");
 
   return (
     <section className="mt-10 bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8">
       <div className="flex items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Valoraciones
-        </h2>
+        <h2 className="text-2xl font-bold text-gray-900">Valoraciones</h2>
 
         <div className="h-[2px] flex-1 max-w-40 bg-gray-900"></div>
       </div>
 
-      <p className="text-gray-600 mb-8">
-        No hay valoraciones aún.
-      </p>
+      <p className="text-gray-600 mb-8">No hay valoraciones aún.</p>
 
       <div className="border-t border-gray-200 pt-7">
         <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -259,17 +153,13 @@ function ValoracionesProducto({ producto }) {
         </p>
 
         <div className="mb-5">
-          <p className="text-sm font-bold text-gray-800 mb-2">
-            Tu valoración
-          </p>
+          <p className="text-sm font-bold text-gray-800 mb-2">Tu valoración</p>
 
           <Rate value={valoracion} onChange={setValoracion} />
         </div>
 
         <div className="mb-5">
-          <p className="text-sm font-bold text-gray-800 mb-2">
-            Tu comentario
-          </p>
+          <p className="text-sm font-bold text-gray-800 mb-2">Tu comentario</p>
 
           <Input.TextArea
             rows={4}
@@ -288,26 +178,140 @@ function ValoracionesProducto({ producto }) {
         </Button>
       </div>
     </section>
-  )
+  );
 }
 
-
 function DetalleProducto() {
-  const { id } = useParams()
+  const { id } = useParams();
 
-  const producto =
-    productos.find((item) => item.id === Number(id)) || productos[0]
+  const [producto, setProducto] = useState(null);
+  const [productosRelacionados, setProductosRelacionados] = useState([]);
+  const [imagenSeleccionada, setImagenSeleccionada] = useState("");
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
 
-  const [imagenSeleccionada, setImagenSeleccionada] = useState(
-    producto.imagenes[0]
-  )
+  useEffect(() => {
+    const cargarProducto = async () => {
+      try {
+        setCargando(true);
+
+        const [productoApi, productosApi] = await Promise.all([
+          obtenerProductoPorId(id),
+          obtenerProductos(),
+        ]);
+
+        const imagenesValidas =
+          productoApi.imagenes
+            ?.filter(
+              (img) => img.tipo !== "oferta_wide" && img.tipo !== "banner",
+            )
+            ?.filter((img) => img.url && img.url.trim() !== "")
+            ?.sort((a, b) => a.orden - b.orden) || [];
+
+        const imagenInicial =
+          imagenesValidas.find((img) => img.esPrincipal) || imagenesValidas[0];
+
+        const imagenPrincipal = imagenInicial?.url
+          ? `${imagenInicial.url}?v=${imagenInicial.updatedAt || imagenInicial.id || "principal"}`
+          : "/img/productos/producto.png";
+
+        setProducto(productoApi);
+        setProductosRelacionados(productosApi);
+        setImagenSeleccionada(imagenPrincipal);
+        setError("");
+      } catch (error) {
+        console.error(error);
+        setError("No se pudo cargar el producto");
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarProducto();
+  }, [id]);
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <Navbar />
+
+        <main className="max-w-7xl mx-auto px-8 py-20 text-center">
+          <h1 className="text-2xl font-black text-gray-900">
+            Cargando producto...
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            Estamos obteniendo el detalle desde la base de datos.
+          </p>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !producto) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <Navbar />
+
+        <main className="max-w-7xl mx-auto px-8 py-20 text-center">
+          <h1 className="text-2xl font-black text-red-600">
+            Producto no encontrado
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            {error || "No encontramos el producto solicitado."}
+          </p>
+
+          <Link
+            to="/productos"
+            className="inline-block mt-6 bg-gray-950 text-white px-5 py-3 rounded-xl font-bold"
+          >
+            Volver a productos
+          </Link>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  const imagenesProducto =
+    producto.imagenes
+      ?.filter((img) => img.tipo !== "oferta_wide" && img.tipo !== "banner")
+      ?.filter((img) => img.url && img.url.trim() !== "")
+      ?.sort((a, b) => a.orden - b.orden) || [];
+
+  const imagenesDetalleBase =
+    imagenesProducto.length > 0 ? [...imagenesProducto] : [];
+
+  while (imagenesDetalleBase.length < 4) {
+    imagenesDetalleBase.push({
+      id: `placeholder-${imagenesDetalleBase.length + 1}`,
+      url: "/img/productos/producto.png",
+      tipo: "placeholder",
+      esPlaceholder: true,
+      orden: imagenesDetalleBase.length + 1,
+    });
+  }
+
+  const imagenesDetalle = imagenesDetalleBase;
+
+  const categoriaNombre = producto.categoria?.nombre || "Sin categoría";
+  const marcaNombre = producto.marca?.nombre || "Sin marca";
+  const precioNormal = producto.precioNormal || producto.precio;
+  const descuento = producto.descuento || 0;
+  const otrosMedios = producto.otrosMedios || producto.precio;
+  const stockOnline =
+    producto.stock > 0 ? `${producto.stock} unidades` : "No disponible";
+  const stockTienda = "Consultar disponibilidad";
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-8 py-8">
-        {/* Breadcrumb */}
         <div className="text-sm text-gray-500 mb-6">
           <Link to="/" className="text-blue-600 hover:underline">
             Home
@@ -321,41 +325,73 @@ function DetalleProducto() {
 
           <span className="mx-2">/</span>
 
-          <span>{producto.categoria}</span>
+          <span>{categoriaNombre}</span>
         </div>
 
-        {/* Parte principal */}
         <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8">
           <div className="grid grid-cols-1 lg:grid-cols-[90px_1fr_380px] gap-8">
-            {/* Miniaturas */}
             <div className="flex lg:flex-col gap-3 order-2 lg:order-1">
-              {producto.imagenes.map((imagen, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setImagenSeleccionada(imagen)}
-                  className={`w-20 h-20 rounded-xl border flex items-center justify-center p-2 bg-white transition ${
-                    imagenSeleccionada === imagen
-                      ? 'border-gray-900 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  <img
-                    src={imagen}
-                    alt={`${producto.nombre} ${index + 1}`}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                </button>
-              ))}
+              {imagenesDetalle.map((imagen, index) => {
+                const urlImagen = imagen.url
+                  ? `${imagen.url}?v=${imagen.updatedAt || imagen.id || index}`
+                  : "/img/productos/producto.png";
+
+                return (
+                  <button
+                    key={imagen.id || index}
+                    type="button"
+                    disabled={imagen.esPlaceholder}
+                    onClick={() => {
+                      if (imagen.esPlaceholder) return;
+
+                      const nuevaImagen = imagen.url
+                        ? `${imagen.url}?v=${imagen.updatedAt || imagen.id || index}`
+                        : "/img/productos/producto.png";
+
+                      setImagenSeleccionada(nuevaImagen);
+                    }}
+                    className={`w-20 h-20 rounded-xl border flex items-center justify-center p-2 bg-white transition ${
+                      imagen.esPlaceholder
+                        ? "border-gray-200 opacity-40 cursor-not-allowed"
+                        : imagenSeleccionada ===
+                            `${imagen.url}?v=${imagen.updatedAt || imagen.id || index}`
+                          ? "border-gray-900 shadow-sm"
+                          : "border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    {imagen.esPlaceholder ? (
+                      <div className="w-full h-full flex items-center justify-center rounded-lg bg-gray-100 border border-dashed border-gray-300">
+                        <span className="text-[10px] font-bold text-gray-400 text-center">
+                          Sin imagen
+                        </span>
+                      </div>
+                    ) : (
+                      <img
+                        src={urlImagen}
+                        alt={`${producto.nombre} ${index + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="max-h-full max-w-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = "/img/productos/producto.png";
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Imagen grande */}
             <div className="order-1 lg:order-2 flex flex-col items-center justify-center">
               <div className="w-full min-h-[420px] flex items-center justify-center">
                 <img
-                  src={imagenSeleccionada}
+                  key={imagenSeleccionada}
+                  src={imagenSeleccionada || "/img/productos/producto.png"}
                   alt={producto.nombre}
+                  referrerPolicy="no-referrer"
                   className="max-h-[430px] max-w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = "/img/productos/producto.png";
+                  }}
                 />
               </div>
 
@@ -364,32 +400,31 @@ function DetalleProducto() {
               </p>
             </div>
 
-            {/* Información de compra */}
             <aside className="order-3">
               <h1 className="text-2xl font-bold text-gray-950 leading-tight">
                 {producto.nombre}
               </h1>
 
               <p className="text-xs text-gray-500 mt-4">
-                Part number: {producto.partNumber}
+                SKU: {producto.sku || "Sin SKU"}
               </p>
 
               <p className="text-sm text-gray-800 mt-4 font-semibold">
-                Marca: {producto.marca}
+                Marca: {marcaNombre}
               </p>
 
               <div className="mt-6 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Precio normal</span>
                   <span className="text-gray-400 line-through">
-                    {formatearPrecio(producto.precioNormal)}
+                    {formatearPrecio(precioNormal)}
                   </span>
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Descuento</span>
                   <span className="text-blue-700 bg-cyan-100 px-2 py-1 rounded text-xs font-black">
-                    {producto.descuento}% DCTO.
+                    {descuento}% DCTO.
                   </span>
                 </div>
 
@@ -405,7 +440,7 @@ function DetalleProducto() {
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Otros medios</span>
-                  <span>{formatearPrecio(producto.otrosMedios)}</span>
+                  <span>{formatearPrecio(otrosMedios)}</span>
                 </div>
               </div>
 
@@ -435,7 +470,7 @@ function DetalleProducto() {
                   </span>
 
                   <span className="text-xs font-bold text-emerald-600">
-                    {producto.stockOnline}
+                    {stockOnline}
                   </span>
                 </div>
 
@@ -445,7 +480,7 @@ function DetalleProducto() {
                   </span>
 
                   <span className="text-xs font-bold text-gray-500">
-                    {producto.stockTienda}
+                    {stockTienda}
                   </span>
                 </div>
 
@@ -455,7 +490,7 @@ function DetalleProducto() {
                   </span>
 
                   <span className="text-xs font-bold text-gray-500">
-                    {producto.garantia}
+                    {producto.garantia || "Sin información"}
                   </span>
                 </div>
               </div>
@@ -463,9 +498,7 @@ function DetalleProducto() {
           </div>
         </section>
 
-        {/* Especificaciones y descripción */}
         <section className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 mt-10">
-          {/* Especificaciones */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Especificaciones
@@ -478,24 +511,31 @@ function DetalleProducto() {
                 Generalidades
               </div>
 
-              {Object.entries(producto.especificaciones).map(
-                ([key, value], index) => (
+              {producto.especificaciones?.length > 0 ? (
+                producto.especificaciones.map((especificacion, index) => (
                   <div
-                    key={key}
+                    key={especificacion.id || index}
                     className={`grid grid-cols-2 px-5 py-4 text-sm ${
-                      index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+                      index % 2 === 0 ? "bg-gray-50" : "bg-white"
                     }`}
                   >
-                    <span className="font-bold text-gray-900">{key}</span>
+                    <span className="font-bold text-gray-900">
+                      {especificacion.nombre}
+                    </span>
 
-                    <span className="text-gray-700">{value}</span>
+                    <span className="text-gray-700">
+                      {especificacion.valor}
+                    </span>
                   </div>
-                )
+                ))
+              ) : (
+                <div className="px-5 py-4 text-sm text-gray-600">
+                  Sin especificaciones registradas.
+                </div>
               )}
             </div>
           </div>
 
-          {/* Descripción */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Descripción
@@ -509,21 +549,23 @@ function DetalleProducto() {
               </h3>
 
               <p className="text-gray-700 leading-relaxed">
-                {producto.descripcion}
+                {producto.descripcion || "Sin descripción disponible."}
               </p>
             </div>
           </div>
         </section>
 
-        <ProductosRelacionadosCarrusel productoActual={producto} />
+        <ProductosRelacionadosCarrusel
+          productoActual={producto}
+          productosRelacionados={productosRelacionados}
+        />
 
         <ValoracionesProducto producto={producto} />
       </main>
 
-
       <Footer />
     </div>
-  )
+  );
 }
 
-export default DetalleProducto
+export default DetalleProducto;

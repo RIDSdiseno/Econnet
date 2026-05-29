@@ -150,6 +150,7 @@ export const crearProducto = async (req, res) => {
                         publicId: img.publicId || null,
                         esPrincipal: img.esPrincipal || index === 0,
                         orden: img.orden || index + 1,
+                        tipo: img.tipo || (img.esPrincipal ? "principal" : "galeria"),
                     })),
                 },
 
@@ -298,6 +299,7 @@ export const editarProducto = async (req, res) => {
                                 publicId: img.publicId || null,
                                 esPrincipal: img.esPrincipal || index === 0,
                                 orden: img.orden || index + 1,
+                                tipo: img.tipo || (img.esPrincipal ? "principal" : "galeria"),
                             })),
                         }
                         : undefined,
@@ -495,4 +497,208 @@ export const reactivarProducto = async (req, res) => {
             error: error.message,
         });
     }
+};
+
+export const agregarImagenProducto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const productoId = Number(id);
+
+    const {
+      url,
+      publicId,
+      esPrincipal = false,
+      orden = 1,
+      tipo = "galeria",
+    } = req.body;
+
+    if (!productoId) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "ID de producto inválido",
+      });
+    }
+
+    if (!url) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La URL de la imagen es obligatoria",
+      });
+    }
+
+    const productoExiste = await prisma.producto.findUnique({
+      where: {
+        id: productoId,
+      },
+    });
+
+    if (!productoExiste) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Producto no encontrado",
+      });
+    }
+
+    const nuevaImagen = await prisma.$transaction(async (tx) => {
+      if (esPrincipal) {
+        await tx.productoImagen.updateMany({
+          where: {
+            productoId,
+          },
+          data: {
+            esPrincipal: false,
+          },
+        });
+      }
+
+      return tx.productoImagen.create({
+        data: {
+          productoId,
+          url,
+          publicId: publicId || null,
+          esPrincipal,
+          orden: Number(orden),
+          tipo,
+        },
+      });
+    });
+
+    res.status(201).json({
+      ok: true,
+      mensaje: "Imagen agregada correctamente",
+      imagen: nuevaImagen,
+    });
+  } catch (error) {
+    console.error("Error al agregar imagen:", error);
+
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al agregar imagen",
+      error: error.message,
+    });
+  }
+};
+
+export const actualizarImagenProducto = async (req, res) => {
+  try {
+    const { imagenId } = req.params;
+    const idImagen = Number(imagenId);
+
+    const { url, publicId, esPrincipal, orden, tipo } = req.body;
+
+    if (!idImagen) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "ID de imagen inválido",
+      });
+    }
+
+    if (!url) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La URL de la imagen es obligatoria",
+      });
+    }
+
+    const imagenExiste = await prisma.productoImagen.findUnique({
+      where: {
+        id: idImagen,
+      },
+    });
+
+    if (!imagenExiste) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Imagen no encontrada",
+      });
+    }
+
+    const imagenActualizada = await prisma.$transaction(async (tx) => {
+      if (esPrincipal === true) {
+        await tx.productoImagen.updateMany({
+          where: {
+            productoId: imagenExiste.productoId,
+          },
+          data: {
+            esPrincipal: false,
+          },
+        });
+      }
+
+      return tx.productoImagen.update({
+        where: {
+          id: idImagen,
+        },
+        data: {
+          url,
+          publicId: publicId || null,
+          esPrincipal: esPrincipal ?? imagenExiste.esPrincipal,
+          orden: orden !== undefined ? Number(orden) : imagenExiste.orden,
+          tipo: tipo || imagenExiste.tipo,
+        },
+      });
+    });
+
+    res.json({
+      ok: true,
+      mensaje: "Imagen actualizada correctamente",
+      imagen: imagenActualizada,
+    });
+  } catch (error) {
+    console.error("Error al actualizar imagen:", error);
+
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al actualizar imagen",
+      error: error.message,
+    });
+  }
+};
+
+
+export const eliminarImagenProducto = async (req, res) => {
+  try {
+    const { imagenId } = req.params;
+    const idImagen = Number(imagenId);
+
+    if (!idImagen) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "ID de imagen inválido",
+      });
+    }
+
+    const imagenExiste = await prisma.productoImagen.findUnique({
+      where: {
+        id: idImagen,
+      },
+    });
+
+    if (!imagenExiste) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Imagen no encontrada",
+      });
+    }
+
+    await prisma.productoImagen.delete({
+      where: {
+        id: idImagen,
+      },
+    });
+
+    res.json({
+      ok: true,
+      mensaje: "Imagen eliminada correctamente",
+      imagenEliminada: imagenExiste,
+    });
+  } catch (error) {
+    console.error("Error al eliminar imagen:", error);
+
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al eliminar imagen",
+      error: error.message,
+    });
+  }
 };

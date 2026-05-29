@@ -6,6 +6,7 @@ import productoRoutes from "./routes/productoRoutes.js";
 import categoriaRoutes from "./routes/categoriaRoutes.js";
 import marcaRoutes from "./routes/marcaRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import anuncioRoutes from "./routes/anuncioRoutes.js";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use("/api/productos", productoRoutes);
 app.use("/api/categorias", categoriaRoutes);
 app.use("/api/marcas", marcaRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/anuncios", anuncioRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend de Econnet funcionando correctamente");
@@ -49,4 +51,16 @@ app.get("/api/test", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
+
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "El body enviado no es un JSON válido",
+      error: error.message,
+    });
+  }
+
+  next(error);
 });

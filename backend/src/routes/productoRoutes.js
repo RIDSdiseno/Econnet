@@ -7,6 +7,9 @@ import {
   desactivarProducto,
   obtenerProductosAdmin,
   reactivarProducto,
+  agregarImagenProducto,
+  actualizarImagenProducto,
+  eliminarImagenProducto,
 } from "../controllers/productoController.js";
 
 const router = express.Router();
@@ -14,8 +17,11 @@ const router = express.Router();
 router.get("/", obtenerProductos);
 router.post("/", crearProducto);
 
-// Ruta admin: debe ir antes de /:id
 router.get("/admin/todos", obtenerProductosAdmin);
+
+router.post("/:id/imagenes", agregarImagenProducto);
+router.put("/imagenes/:imagenId", actualizarImagenProducto);
+router.delete("/imagenes/:imagenId", eliminarImagenProducto);
 
 router.get("/:id", obtenerProductoPorId);
 router.put("/:id", editarProducto);

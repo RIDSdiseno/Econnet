@@ -43,38 +43,95 @@ async function main() {
     },
   });
 
-  const hp = await prisma.marca.upsert({
-    where: { nombre: "HP" },
-    update: {},
-    create: {
+  const marcasSeed = [
+    {
+      nombre: "Apple",
+      logoUrl: "/img/marcas/apple.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "principal",
+      orden: 1,
+    },
+    {
+      nombre: "ASUS",
+      logoUrl: "/img/marcas/asus.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "principal",
+      orden: 2,
+    },
+    {
+      nombre: "Dell",
+      logoUrl: "/img/marcas/dell.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "principal",
+      orden: 3,
+    },
+    {
       nombre: "HP",
+      logoUrl: "/img/marcas/hp.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "principal",
+      orden: 4,
     },
-  });
-
-  const samsung = await prisma.marca.upsert({
-    where: { nombre: "Samsung" },
-    update: {},
-    create: {
+    {
+      nombre: "Lenovo",
+      logoUrl: "/img/marcas/lenovo.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "principal",
+      orden: 5,
+    },
+    {
       nombre: "Samsung",
+      logoUrl: "/img/marcas/samsung.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "principal",
+      orden: 6,
     },
-  });
-
-  const kingston = await prisma.marca.upsert({
-    where: { nombre: "Kingston" },
-    update: {},
-    create: {
+    {
       nombre: "Kingston",
+      logoUrl: "/img/marcas/kingston.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "otras",
+      orden: 7,
     },
-  });
-
-  const ezviz = await prisma.marca.upsert({
-    where: { nombre: "EZVIZ" },
-    update: {},
-    create: {
+    {
       nombre: "EZVIZ",
+      logoUrl: "/img/marcas/ezviz.png",
+      activo: true,
+      mostrarHome: true,
+      grupo: "otras",
+      orden: 8,
     },
-  });
+  ];
 
+  const marcasCreadas = {};
+
+  for (const marcaData of marcasSeed) {
+    const marca = await prisma.marca.upsert({
+      where: {
+        nombre: marcaData.nombre,
+      },
+      update: marcaData,
+      create: marcaData,
+    });
+
+    marcasCreadas[marcaData.nombre] = marca;
+  }
+
+  const apple = marcasCreadas["Apple"];
+  const asus = marcasCreadas["ASUS"];
+  const dell = marcasCreadas["Dell"];
+  const hp = marcasCreadas["HP"];
+  const lenovo = marcasCreadas["Lenovo"];
+  const samsung = marcasCreadas["Samsung"];
+  const kingston = marcasCreadas["Kingston"];
+  const ezviz = marcasCreadas["EZVIZ"];
   const notebook = await prisma.producto.upsert({
     where: { slug: "notebook-hp-ryzen-5" },
     update: {},

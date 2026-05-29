@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Carousel } from "antd";
 import {
   LeftOutlined,
@@ -6,63 +6,7 @@ import {
   ShoppingCartOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-
-const productosDestacados = [
-  {
-    id: 1,
-    marca: "ASUS",
-    nombre: "Notebook ASUS ExpertBook P3 Ryzen AI 7, 16GB RAM, 512GB SSD",
-    precio: "$1.407.037",
-    precioNormal: "$1.607.037",
-    descuento: "12%",
-    imagen: "/img/destacados/camara.png",
-  },
-  {
-    id: 2,
-    marca: "GIGABYTE",
-    nombre: 'Monitor Gamer 27" QHD, 240Hz, 0.03ms, Panel OLED',
-    precio: "$549.990",
-    precioNormal: "$649.990",
-    descuento: "15%",
-    imagen: "/img/destacados/prueba1.png",
-  },
-  {
-    id: 3,
-    marca: "ASUS",
-    nombre: "Mouse Gamer inalámbrico ASUS ROG Harpe Ace Aim Lab Edition",
-    precio: "$89.990",
-    precioNormal: "$109.990",
-    descuento: "18%",
-    imagen: "/img/destacados/prueba2.png",
-  },
-  {
-    id: 4,
-    marca: "KINGSTON",
-    nombre: "SSD Kingston NVMe 1TB alta velocidad para notebook y PC",
-    precio: "$69.990",
-    precioNormal: "$89.990",
-    descuento: "22%",
-    imagen: "/img/destacados/camara.png",
-  },
-  {
-    id: 5,
-    marca: "REDRAGON",
-    nombre: "Teclado mecánico RGB switches red para gaming",
-    precio: "$44.990",
-    precioNormal: "$59.990",
-    descuento: "25%",
-    imagen: "/img/destacados/prueba.png",
-  },
-  {
-    id: 6,
-    marca: "LOGITECH",
-    nombre: "Webcam Full HD con micrófono integrado para videollamadas",
-    precio: "$39.990",
-    precioNormal: "$49.990",
-    descuento: "20%",
-    imagen: "/img/destacados/prueba3.png",
-  },
-];
+import { obtenerProductos } from "../services/api";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -72,6 +16,33 @@ function dividirEnGrupos(lista, cantidad) {
   }
 
   return grupos;
+}
+
+function formatearPrecio(valor) {
+  const numero = Number(valor) || 0;
+
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(numero);
+}
+
+function adaptarProducto(producto) {
+  const imagenPrincipal =
+    producto.imagenes?.find((img) => img.esPrincipal)?.url ||
+    producto.imagenes?.[0]?.url ||
+    "/img/productos/producto.png";
+
+  return {
+    id: producto.id,
+    marca: producto.marca?.nombre || "Sin marca",
+    nombre: producto.nombre,
+    precio: producto.precio,
+    precioNormal: producto.precioNormal || producto.precio,
+    descuento: producto.descuento || 0,
+    imagen: imagenPrincipal,
+  };
 }
 
 function ProductoCard({ producto }) {
@@ -98,19 +69,25 @@ function ProductoCard({ producto }) {
           </p>
         </Link>
 
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
-            {producto.descuento} DCTO.
-          </span>
+        <div className="mt-3 flex items-center gap-2 min-h-[24px]">
+          {producto.descuento > 0 && (
+            <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
+              {producto.descuento}% DCTO.
+            </span>
+          )}
 
-          <span className="text-xs text-gray-400 line-through">
-            {producto.precioNormal}
-          </span>
+          {producto.precioNormal > producto.precio && (
+            <span className="text-xs text-gray-400 line-through">
+              {formatearPrecio(producto.precioNormal)}
+            </span>
+          )}
         </div>
 
         <div className="mt-2 flex items-end justify-between gap-2">
           <div>
-            <p className="text-xl font-bold text-gray-950">{producto.precio}</p>
+            <p className="text-xl font-bold text-gray-950">
+              {formatearPrecio(producto.precio)}
+            </p>
 
             <p className="text-xs text-gray-500">Precio transferencia</p>
           </div>
@@ -126,7 +103,51 @@ function ProductoCard({ producto }) {
 
 function ProductosDestacados() {
   const carouselRef = useRef(null);
+
+  const [productosDestacados, setProductosDestacados] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargarProductos = async () => {
+      try {
+        setCargando(true);
+
+        const productosApi = await obtenerProductos();
+
+        const productosAdaptados = productosApi
+          .slice(0, 8)
+          .map(adaptarProducto);
+
+        setProductosDestacados(productosAdaptados);
+      } catch (error) {
+        console.error("Error al cargar productos destacados:", error);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarProductos();
+  }, []);
+
   const grupos = dividirEnGrupos(productosDestacados, 4);
+
+  if (cargando) {
+    return (
+      <section className="bg-gray-100 px-8 pt-8 pb-12">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Productos destacados
+          </h2>
+
+          <p className="text-gray-600 mt-3">Cargando productos...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (productosDestacados.length === 0) {
+    return null;
+  }
 
   return (
     <section className="bg-gray-100 px-8 pt-8 pb-12">

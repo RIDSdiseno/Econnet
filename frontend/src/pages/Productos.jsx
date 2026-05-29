@@ -4,163 +4,11 @@ import { Checkbox, Select, Button, Pagination } from "antd";
 import { ShoppingCartOutlined, FilterOutlined } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-
-const productos = [
-  {
-    id: 1,
-    nombre: 'Monitor Gamer ASUS TUF 27" Full HD 180Hz',
-    categoria: "Monitores",
-    marca: "ASUS",
-    precio: 224990,
-    precioNormal: 299990,
-    descuento: 25,
-    imagen: "/img/productos/producto.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 2,
-    nombre: "Notebook HP Ryzen 5 16GB RAM 512GB SSD",
-    categoria: "Notebook",
-    marca: "HP",
-    precio: 599990,
-    precioNormal: 699990,
-    descuento: 14,
-    imagen: "/img/productos/producto2.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 3,
-    nombre: "Notebook Lenovo IdeaPad 15 Intel Core i5",
-    categoria: "Notebook",
-    marca: "Lenovo",
-    precio: 529990,
-    precioNormal: 649990,
-    descuento: 18,
-    imagen: "/img/productos/producto3.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 4,
-    nombre: "MacBook Air 13 Chip M2 8GB RAM 256GB SSD",
-    categoria: "Notebook",
-    marca: "Apple",
-    precio: 999990,
-    precioNormal: 1199990,
-    descuento: 16,
-    imagen: "/img/productos/prueba.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 5,
-    nombre: 'All In One Dell 24" Intel Core i5 8GB RAM',
-    categoria: "AIO",
-    marca: "Dell",
-    precio: 679990,
-    precioNormal: 799990,
-    descuento: 15,
-    imagen: "/img/productos/prueba1.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 6,
-    nombre: 'All In One HP 24" Ryzen 5 512GB SSD',
-    categoria: "AIO",
-    marca: "HP",
-    precio: 649990,
-    precioNormal: 749990,
-    descuento: 13,
-    imagen: "/img/productos/prueba1.png",
-    disponible: true,
-    oferta: false,
-  },
-  {
-    id: 7,
-    nombre: "Cámara de seguridad Samsung WiFi Full HD",
-    categoria: "Cámara de seguridad",
-    marca: "Samsung",
-    precio: 59990,
-    precioNormal: 79990,
-    descuento: 25,
-    imagen: "/img/productos/prueba2.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 8,
-    nombre: "Cámara de seguridad HP Smart Home 1080p",
-    categoria: "Cámara de seguridad",
-    marca: "HP",
-    precio: 44990,
-    precioNormal: 59990,
-    descuento: 25,
-    imagen: "/img/productos/prueba3.png",
-    disponible: false,
-    oferta: true,
-  },
-  {
-    id: 9,
-    nombre: "SSD Samsung 1TB NVMe alta velocidad",
-    categoria: "Almacenamiento",
-    marca: "Samsung",
-    precio: 89990,
-    precioNormal: 119990,
-    descuento: 25,
-    imagen: "/img/productos/producto.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 10,
-    nombre: "SSD Lenovo 512GB SATA para notebook",
-    categoria: "Almacenamiento",
-    marca: "Lenovo",
-    precio: 39990,
-    precioNormal: 49990,
-    descuento: 20,
-    imagen: "/img/productos/producto3.png",
-    disponible: true,
-    oferta: false,
-  },
-  {
-    id: 11,
-    nombre: 'Monitor Dell 24" Full HD IPS 75Hz',
-    categoria: "Monitores",
-    marca: "Dell",
-    precio: 139990,
-    precioNormal: 169990,
-    descuento: 17,
-    imagen: "/img/productos/prueba2.png",
-    disponible: true,
-    oferta: true,
-  },
-  {
-    id: 12,
-    nombre: 'Monitor Samsung 27" Curvo Full HD',
-    categoria: "Monitores",
-    marca: "Samsung",
-    precio: 189990,
-    precioNormal: 239990,
-    descuento: 20,
-    imagen: "/img/productos/prueba3.png",
-    disponible: true,
-    oferta: true,
-  },
-];
-
-const categorias = [
-  "Monitores",
-  "AIO",
-  "Notebook",
-  "Cámara de seguridad",
-  "Almacenamiento",
-];
-
-const marcas = ["Apple", "ASUS", "Dell", "HP", "Lenovo", "Samsung"];
+import {
+  obtenerProductos,
+  obtenerCategorias,
+  obtenerMarcas,
+} from "../services/api";
 
 const rangosPrecio = [
   {
@@ -204,6 +52,8 @@ function formatearPrecio(valor) {
 }
 
 function SidebarFiltros({
+  categorias = [],
+  marcas = [],
   categoriasSeleccionadas,
   setCategoriasSeleccionadas,
   marcasSeleccionadas,
@@ -216,6 +66,14 @@ function SidebarFiltros({
   setSoloOfertas,
   limpiarFiltros,
 }) {
+  const marcasPrincipales = marcas
+    .filter((marca) => marca.grupo === "principal")
+    .map((marca) => marca.nombre);
+
+  const otrasMarcas = marcas
+    .filter((marca) => marca.grupo !== "principal")
+    .map((marca) => marca.nombre);
+
   return (
     <aside className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 h-fit">
       <div className="flex items-center justify-between mb-5">
@@ -248,11 +106,33 @@ function SidebarFiltros({
           onChange={setMarcasSeleccionadas}
           className="flex flex-col gap-3"
         >
-          {marcas.map((marca) => (
-            <Checkbox key={marca} value={marca}>
-              {marca}
-            </Checkbox>
-          ))}
+          {marcasPrincipales.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wide">
+                Marcas principales
+              </p>
+
+              {marcasPrincipales.map((marca) => (
+                <Checkbox key={marca} value={marca}>
+                  {marca}
+                </Checkbox>
+              ))}
+            </div>
+          )}
+
+          {otrasMarcas.length > 0 && (
+            <div className="flex flex-col gap-3 mt-4">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wide">
+                Otras marcas
+              </p>
+
+              {otrasMarcas.map((marca) => (
+                <Checkbox key={marca} value={marca}>
+                  {marca}
+                </Checkbox>
+              ))}
+            </div>
+          )}
         </Checkbox.Group>
       </div>
 
@@ -369,6 +249,12 @@ function Productos() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const categoriaUrl = searchParams.get("categoria");
+  const marcaUrl = searchParams.get("marca");
+  const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [marcas, setMarcas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
 
   const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]);
   const [marcasSeleccionadas, setMarcasSeleccionadas] = useState([]);
@@ -379,17 +265,67 @@ function Productos() {
 
   const [paginaActual, setPaginaActual] = useState(1);
   const productosPorPagina = 6;
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setCargando(true);
+
+        const [productosApi, categoriasApi, marcasApi] = await Promise.all([
+          obtenerProductos(),
+          obtenerCategorias(),
+          obtenerMarcas(),
+        ]);
+
+        const productosAdaptados = productosApi.map((producto) => {
+          const imagenPrincipal =
+            producto.imagenes?.find((img) => img.esPrincipal)?.url ||
+            producto.imagenes?.[0]?.url ||
+            "/img/productos/producto.png";
+
+          return {
+            ...producto,
+            categoria: producto.categoria?.nombre || "",
+            marca: producto.marca?.nombre || "Sin marca",
+            imagen: imagenPrincipal,
+            disponible: producto.stock > 0,
+            oferta: false,
+            precioNormal: producto.precio,
+            descuento: 0,
+          };
+        });
+
+        setProductos(productosAdaptados);
+        setCategorias(categoriasApi.map((categoria) => categoria.nombre));
+        setMarcas(marcasApi.sort((a, b) => a.orden - b.orden));
+        setError("");
+      } catch (error) {
+        console.error(error);
+        setError("No se pudieron cargar los productos");
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
 
   useEffect(() => {
-    if (categoriaUrl && categorias.includes(categoriaUrl)) {
+    if (categoriaUrl) {
       setCategoriasSeleccionadas([categoriaUrl]);
     }
 
     if (!categoriaUrl) {
       setCategoriasSeleccionadas([]);
     }
-  }, [categoriaUrl]);
 
+    if (marcaUrl) {
+      setMarcasSeleccionadas([marcaUrl]);
+    }
+
+    if (!marcaUrl) {
+      setMarcasSeleccionadas([]);
+    }
+  }, [categoriaUrl, marcaUrl, categorias, marcas]);
   const productosFiltrados = useMemo(() => {
     let resultado = [...productos];
 
@@ -436,6 +372,7 @@ function Productos() {
 
     return resultado;
   }, [
+    productos,
     categoriasSeleccionadas,
     marcasSeleccionadas,
     preciosSeleccionados,
@@ -471,7 +408,43 @@ function Productos() {
     setOrden("relevancia");
     navigate("/productos");
   };
+  if (cargando) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <Navbar />
 
+        <main className="max-w-7xl mx-auto px-8 py-20 text-center">
+          <h1 className="text-2xl font-black text-gray-900">
+            Cargando productos...
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            Estamos obteniendo los productos desde la base de datos.
+          </p>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <Navbar />
+
+        <main className="max-w-7xl mx-auto px-8 py-20 text-center">
+          <h1 className="text-2xl font-black text-red-600">
+            Error al cargar productos
+          </h1>
+
+          <p className="text-gray-600 mt-2">{error}</p>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       <Navbar />
@@ -528,6 +501,8 @@ function Productos() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
           <SidebarFiltros
+            categorias={categorias}
+            marcas={marcas}
             categoriasSeleccionadas={categoriasSeleccionadas}
             setCategoriasSeleccionadas={setCategoriasSeleccionadas}
             marcasSeleccionadas={marcasSeleccionadas}
