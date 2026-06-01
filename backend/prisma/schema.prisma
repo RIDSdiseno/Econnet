@@ -138,8 +138,32 @@ model Usuario {
   rol               String   @default("cliente")
   activo            Boolean  @default(true)
 
+  direcciones       Direccion[]
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@map("usuarios")
+}
+
+model Direccion {
+  id           Int      @id @default(autoincrement())
+  usuarioId    Int
+
+  nombre       String?
+  direccion    String
+  region       String?
+  comuna       String
+  calle        String?
+  numero       String?
+  departamento String?
+  telefono     String?
+  principal    Boolean  @default(false)
+
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("direcciones")
 }

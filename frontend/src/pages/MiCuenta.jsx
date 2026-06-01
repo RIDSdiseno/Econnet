@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button, Modal, Input, message } from "antd";
+import { Button, Modal, Input, Select, Checkbox, message } from "antd";
 import {
   UserOutlined,
   HomeOutlined,
@@ -16,6 +16,12 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
+import {
+  obtenerDirecciones,
+  crearDireccion,
+  marcarDireccionPrincipal,
+  eliminarDireccionUsuario,
+} from "../services/api";
 
 const pedidosUsuario = [
   {
@@ -68,31 +74,71 @@ const menuCuenta = [
   },
 ];
 
+const regionesComunas = [
+  {
+    value: "Región Metropolitana",
+    label: "Región Metropolitana",
+    comunas: [
+      "Santiago",
+      "Providencia",
+      "Las Condes",
+      "Ñuñoa",
+      "La Florida",
+      "Puente Alto",
+      "Maipú",
+      "San Bernardo",
+      "Quilicura",
+      "Pudahuel",
+    ],
+  },
+  {
+    value: "Valparaíso",
+    label: "Valparaíso",
+    comunas: [
+      "Valparaíso",
+      "Viña del Mar",
+      "Quilpué",
+      "Villa Alemana",
+      "Concón",
+    ],
+  },
+];
+
+const opcionesRegiones = regionesComunas.map((region) => ({
+  value: region.value,
+  label: region.label,
+}));
+
+const obtenerComunasPorRegion = (regionSeleccionada) => {
+  const region = regionesComunas.find(
+    (item) => item.value === regionSeleccionada,
+  );
+
+  if (!region) return [];
+
+  return region.comunas.map((comuna) => ({
+    value: comuna,
+    label: comuna,
+  }));
+};
+
 function MiCuenta() {
   const navigate = useNavigate();
-  const { usuario, cargandoAuth, estaLogueado, logout } = useAuth();
+  const { usuario, token, cargandoAuth, estaLogueado, logout } = useAuth();
 
   const [seccionActiva, setSeccionActiva] = useState("datos");
   const [modalDireccion, setModalDireccion] = useState(false);
 
-  const [direcciones, setDirecciones] = useState([
-    {
-      id: 1,
-      direccion: "Av. Providencia 1234",
-      comuna: "Providencia, Región Metropolitana",
-      principal: true,
-    },
-    {
-      id: 2,
-      direccion: "Calle Los Carrera 456",
-      comuna: "Santiago, Región Metropolitana",
-      principal: false,
-    },
-  ]);
+  const [direcciones, setDirecciones] = useState([]);
+  const [cargandoDirecciones, setCargandoDirecciones] = useState(false);
 
   const [nuevaDireccion, setNuevaDireccion] = useState({
-    direccion: "",
+    region: "",
     comuna: "",
+    calle: "",
+    numero: "",
+    departamento: "",
+    principal: false,
   });
 
   useEffect(() => {
@@ -102,48 +148,122 @@ function MiCuenta() {
     }
   }, [cargandoAuth, estaLogueado, navigate]);
 
+  useEffect(() => {
+    const cargarDirecciones = async () => {
+      if (!token || !estaLogueado) return;
+
+      try {
+        setCargandoDirecciones(true);
+
+        const data = await obtenerDirecciones(token);
+        setDirecciones(data);
+      } catch (error) {
+        message.error(error.message || "No se pudieron cargar las direcciones");
+      } finally {
+        setCargandoDirecciones(false);
+      }
+    };
+
+    cargarDirecciones();
+  }, [token, estaLogueado]);
+
   const cerrarSesion = () => {
     logout();
     message.success("Sesión cerrada");
     navigate("/");
   };
 
-  const agregarDireccion = () => {
-    if (!nuevaDireccion.direccion.trim() || !nuevaDireccion.comuna.trim()) {
-      message.warning("Completa la dirección y comuna");
+  const agregarDireccion = async () => {
+    if (
+      !nuevaDireccion.region.trim() ||
+      !nuevaDireccion.comuna.trim() ||
+      !nuevaDireccion.calle.trim() ||
+      !nuevaDireccion.numero.trim()
+    ) {
+      message.warning("Completa región, comuna, calle y número");
       return;
     }
 
-    setDirecciones((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        direccion: nuevaDireccion.direccion,
+    if (nuevaDireccion.calle.trim().length < 3) {
+      message.warning("La calle debe tener al menos 3 caracteres");
+      return;
+    }
+
+    if (!/^[0-9]+[a-zA-Z0-9-]*$/.test(nuevaDireccion.numero.trim())) {
+      message.warning("Ingresa un número de dirección válido");
+      return;
+    }
+
+    try {
+      const direccionCreada = await crearDireccion(token, {
+        nombre: "Dirección",
+        region: nuevaDireccion.region,
         comuna: nuevaDireccion.comuna,
+        calle: nuevaDireccion.calle.trim(),
+        numero: nuevaDireccion.numero.trim(),
+        departamento: nuevaDireccion.departamento.trim(),
+        telefono: usuario.telefono || "",
+        principal: nuevaDireccion.principal || direcciones.length === 0,
+      });
+
+      setDirecciones((prev) => {
+        if (direccionCreada.principal) {
+          return [
+            direccionCreada,
+            ...prev.map((item) => ({
+              ...item,
+              principal: false,
+            })),
+          ];
+        }
+
+        return [direccionCreada, ...prev];
+      });
+
+      setNuevaDireccion({
+        region: "",
+        comuna: "",
+        calle: "",
+        numero: "",
+        departamento: "",
         principal: false,
-      },
-    ]);
+      });
 
-    setNuevaDireccion({
-      direccion: "",
-      comuna: "",
-    });
-
-    setModalDireccion(false);
-    message.success("Dirección agregada");
+      setModalDireccion(false);
+      message.success("Dirección agregada");
+    } catch (error) {
+      message.error(error.message || "No se pudo agregar la dirección");
+    }
   };
 
-  const eliminarDireccion = (id) => {
-    setDirecciones((prev) => prev.filter((item) => item.id !== id));
+  const eliminarDireccion = async (id) => {
+    try {
+      await eliminarDireccionUsuario(token, id);
+
+      setDirecciones((prev) => prev.filter((item) => item.id !== id));
+      message.success("Dirección eliminada");
+    } catch (error) {
+      message.error(error.message || "No se pudo eliminar la dirección");
+    }
   };
 
-  const guardarComoPrincipal = (id) => {
-    setDirecciones((prev) =>
-      prev.map((item) => ({
-        ...item,
-        principal: item.id === id,
-      })),
-    );
+  const guardarComoPrincipal = async (id) => {
+    try {
+      const direccionActualizada = await marcarDireccionPrincipal(token, id);
+
+      setDirecciones((prev) =>
+        prev.map((item) => ({
+          ...item,
+          principal: item.id === direccionActualizada.id,
+        })),
+      );
+
+      message.success("Dirección principal actualizada");
+    } catch (error) {
+      message.error(
+        error.message || "No se pudo actualizar la dirección principal",
+      );
+    }
   };
 
   if (cargandoAuth) {
@@ -309,6 +429,24 @@ function MiCuenta() {
                 </div>
 
                 <div className="space-y-5">
+                  {cargandoDirecciones && (
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 text-center text-gray-600">
+                      Cargando direcciones...
+                    </div>
+                  )}
+
+                  {!cargandoDirecciones && direcciones.length === 0 && (
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 text-center">
+                      <h3 className="text-xl font-black text-gray-900">
+                        No tienes direcciones guardadas
+                      </h3>
+
+                      <p className="text-gray-600 mt-2">
+                        Agrega una dirección para usarla después en el checkout.
+                      </p>
+                    </div>
+                  )}
+
                   {direcciones.map((item) => (
                     <article
                       key={item.id}
@@ -528,39 +666,133 @@ function MiCuenta() {
         title="Agregar dirección"
       >
         <div className="space-y-4 pt-3">
-          <Input
-            size="large"
-            placeholder="Dirección"
-            value={nuevaDireccion.direccion}
+          <div>
+            <label className="text-sm font-bold text-gray-800">Región</label>
+
+            <Select
+              size="large"
+              placeholder="Selecciona una región..."
+              value={nuevaDireccion.region || undefined}
+              options={opcionesRegiones}
+              onChange={(value) =>
+                setNuevaDireccion((prev) => ({
+                  ...prev,
+                  region: value,
+                  comuna: "",
+                }))
+              }
+              className="!mt-2 w-full"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-800">Comuna</label>
+
+            <Select
+              size="large"
+              placeholder={
+                nuevaDireccion.region
+                  ? "Selecciona una comuna..."
+                  : "Primero selecciona una región..."
+              }
+              value={nuevaDireccion.comuna || undefined}
+              options={obtenerComunasPorRegion(nuevaDireccion.region)}
+              disabled={!nuevaDireccion.region}
+              onChange={(value) =>
+                setNuevaDireccion((prev) => ({
+                  ...prev,
+                  comuna: value,
+                }))
+              }
+              className="!mt-2 w-full"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-800">Calle</label>
+
+            <Input
+              size="large"
+              placeholder="Ej: Calle Cardenal Fresno"
+              value={nuevaDireccion.calle}
+              onChange={(e) =>
+                setNuevaDireccion((prev) => ({
+                  ...prev,
+                  calle: e.target.value,
+                }))
+              }
+              className="!mt-2 !rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-800">Número</label>
+
+            <Input
+              size="large"
+              placeholder="Ej: 1632"
+              value={nuevaDireccion.numero}
+              onChange={(e) =>
+                setNuevaDireccion((prev) => ({
+                  ...prev,
+                  numero: e.target.value,
+                }))
+              }
+              className="!mt-2 !rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-800">
+              Departamento, casa u oficina
+            </label>
+
+            <Input
+              size="large"
+              placeholder="Ej: Depto. 101, casa 3"
+              value={nuevaDireccion.departamento}
+              onChange={(e) =>
+                setNuevaDireccion((prev) => ({
+                  ...prev,
+                  departamento: e.target.value,
+                }))
+              }
+              className="!mt-2 !rounded-xl"
+            />
+
+            <p className="text-xs text-gray-500 mt-1">Opcional</p>
+          </div>
+
+          <Checkbox
+            checked={nuevaDireccion.principal}
             onChange={(e) =>
               setNuevaDireccion((prev) => ({
                 ...prev,
-                direccion: e.target.value,
+                principal: e.target.checked,
               }))
             }
-          />
-
-          <Input
-            size="large"
-            placeholder="Comuna / Región"
-            value={nuevaDireccion.comuna}
-            onChange={(e) =>
-              setNuevaDireccion((prev) => ({
-                ...prev,
-                comuna: e.target.value,
-              }))
-            }
-          />
-
-          <Button
-            block
-            size="large"
-            type="primary"
-            onClick={agregarDireccion}
-            className="!bg-gray-950 !border-gray-950 !font-bold hover:!bg-black"
           >
-            Guardar dirección
-          </Button>
+            Guardar como dirección principal
+          </Checkbox>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <Button
+              size="large"
+              onClick={() => setModalDireccion(false)}
+              className="!rounded-xl !font-bold"
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              size="large"
+              type="primary"
+              onClick={agregarDireccion}
+              className="!bg-gray-950 !border-gray-950 !font-bold hover:!bg-black !rounded-xl"
+            >
+              Guardar dirección
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

@@ -106,3 +106,72 @@ export const obtenerPerfil = async (token) => {
 
   return data;
 };
+
+export const obtenerDirecciones = async (token) => {
+  const respuesta = await fetch(`${API_URL}/direcciones`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al obtener direcciones");
+  }
+
+  return data.direcciones;
+};
+
+export const crearDireccion = async (token, datos) => {
+  const respuesta = await fetch(`${API_URL}/direcciones`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(datos),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al crear dirección");
+  }
+
+  return data.direccion;
+};
+
+export const marcarDireccionPrincipal = async (token, id) => {
+  const respuesta = await fetch(`${API_URL}/direcciones/${id}/principal`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al marcar dirección principal");
+  }
+
+  return data.direccion;
+};
+
+export const eliminarDireccionUsuario = async (token, id) => {
+  const respuesta = await fetch(`${API_URL}/direcciones/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al eliminar dirección");
+  }
+
+  return data;
+};
