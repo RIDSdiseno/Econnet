@@ -263,3 +263,89 @@ export const cambiarPasswordUsuario = async (token, datos) => {
 
   return data;
 };
+
+export const obtenerCarrito = async (token) => {
+  const respuesta = await fetch(`${API_URL}/carrito`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al obtener carrito");
+  }
+
+  return data;
+};
+
+export const agregarProductoCarrito = async (token, productoId) => {
+  const respuesta = await fetch(`${API_URL}/carrito/${productoId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al agregar producto al carrito");
+  }
+
+  return data.item;
+};
+
+export const actualizarCantidadCarrito = async (token, productoId, cantidad) => {
+  const respuesta = await fetch(`${API_URL}/carrito/${productoId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ cantidad }),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al actualizar cantidad");
+  }
+
+  return data.item;
+};
+
+export const eliminarProductoCarrito = async (token, productoId) => {
+  const respuesta = await fetch(`${API_URL}/carrito/${productoId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al eliminar producto del carrito");
+  }
+
+  return data;
+};
+
+export const vaciarCarritoUsuario = async (token) => {
+  const respuesta = await fetch(`${API_URL}/carrito`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al vaciar carrito");
+  }
+
+  return data;
+};

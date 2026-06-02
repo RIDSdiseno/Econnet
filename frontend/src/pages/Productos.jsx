@@ -16,6 +16,7 @@ import {
   obtenerFavoritos,
   agregarFavorito,
   eliminarFavoritoUsuario,
+  agregarProductoCarrito,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -197,6 +198,8 @@ function ProductoCard({
   esFavorito,
   cargandoFavorito,
   onToggleFavorito,
+  cargandoCarrito,
+  onAgregarCarrito,
 }) {
   return (
     <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group h-full">
@@ -273,7 +276,13 @@ function ProductoCard({
             <p className="text-xs text-gray-500">Precio transferencia</p>
           </div>
 
-          <button className="w-10 h-10 rounded-xl bg-emerald-400 text-gray-950 flex items-center justify-center hover:bg-emerald-300 transition shadow-sm border border-emerald-500">
+          <button
+            type="button"
+            disabled={cargandoCarrito}
+            onClick={() => onAgregarCarrito(producto)}
+            className="w-10 h-10 rounded-xl bg-emerald-400 text-gray-950 flex items-center justify-center hover:bg-emerald-300 transition shadow-sm border border-emerald-500 disabled:opacity-50"
+            title="Agregar al carrito"
+          >
             <ShoppingCartOutlined className="text-lg" />
           </button>
         </div>
@@ -302,6 +311,7 @@ function Productos() {
   const [orden, setOrden] = useState("relevancia");
   const [favoritosIds, setFavoritosIds] = useState([]);
   const [cargandoFavoritoId, setCargandoFavoritoId] = useState(null);
+  const [cargandoCarritoId, setCargandoCarritoId] = useState(null);
 
   const [paginaActual, setPaginaActual] = useState(1);
   const productosPorPagina = 6;
@@ -490,6 +500,26 @@ function Productos() {
     }
   };
 
+  const agregarAlCarrito = async (producto) => {
+    if (!estaLogueado || !token) {
+      message.info("Inicia sesión para agregar productos al carrito");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setCargandoCarritoId(producto.id);
+
+      await agregarProductoCarrito(token, producto.id);
+
+      message.success("Producto agregado al carrito");
+    } catch (error) {
+      message.error(error.message || "No se pudo agregar al carrito");
+    } finally {
+      setCargandoCarritoId(null);
+    }
+  };
+
   const limpiarFiltros = () => {
     setCategoriasSeleccionadas([]);
     setMarcasSeleccionadas([]);
@@ -618,6 +648,8 @@ function Productos() {
                       esFavorito={favoritosIds.includes(producto.id)}
                       cargandoFavorito={cargandoFavoritoId === producto.id}
                       onToggleFavorito={toggleFavorito}
+                      cargandoCarrito={cargandoCarritoId === producto.id}
+                      onAgregarCarrito={agregarAlCarrito}
                     />
                   ))}
                 </div>

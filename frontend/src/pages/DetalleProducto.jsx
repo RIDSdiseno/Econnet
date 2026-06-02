@@ -16,6 +16,7 @@ import {
   obtenerFavoritos,
   agregarFavorito,
   eliminarFavoritoUsuario,
+  agregarProductoCarrito,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -206,6 +207,7 @@ function DetalleProducto() {
 
   const [esFavorito, setEsFavorito] = useState(false);
   const [cargandoFavorito, setCargandoFavorito] = useState(false);
+  const [cargandoCarrito, setCargandoCarrito] = useState(false);
 
   useEffect(() => {
     const cargarProducto = async () => {
@@ -295,6 +297,51 @@ function DetalleProducto() {
       message.error(error.message || "No se pudo actualizar favoritos");
     } finally {
       setCargandoFavorito(false);
+    }
+  };
+
+  const agregarAlCarrito = async () => {
+    if (!producto) return;
+
+    if (!estaLogueado || !token) {
+      message.info("Inicia sesión para agregar productos al carrito");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setCargandoCarrito(true);
+
+      await agregarProductoCarrito(token, producto.id);
+
+      message.success("Producto agregado al carrito");
+    } catch (error) {
+      message.error(error.message || "No se pudo agregar al carrito");
+    } finally {
+      setCargandoCarrito(false);
+    }
+  };
+
+  const comprarAhora = async () => {
+    if (!producto) return;
+
+    if (!estaLogueado || !token) {
+      message.info("Inicia sesión para comprar este producto");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setCargandoCarrito(true);
+
+      await agregarProductoCarrito(token, producto.id);
+
+      message.success("Producto agregado al carrito");
+      navigate("/carrito");
+    } catch (error) {
+      message.error(error.message || "No se pudo continuar con la compra");
+    } finally {
+      setCargandoCarrito(false);
     }
   };
 
@@ -481,7 +528,6 @@ function DetalleProducto() {
                 Marca: {marcaNombre}
               </p>
 
-              
               <div className="mt-6 flex flex-col gap-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Precio normal</span>
@@ -517,6 +563,8 @@ function DetalleProducto() {
                 <Button
                   block
                   size="large"
+                  loading={cargandoCarrito}
+                  onClick={agregarAlCarrito}
                   className="!h-12 !rounded-xl !border-gray-900 !text-gray-900 !font-bold hover:!border-black hover:!text-black"
                 >
                   Agregar al carro
@@ -526,6 +574,8 @@ function DetalleProducto() {
                   block
                   size="large"
                   type="primary"
+                  loading={cargandoCarrito}
+                  onClick={comprarAhora}
                   className="!h-12 !rounded-xl !bg-gray-950 !font-bold hover:!bg-black"
                 >
                   Comprar ahora

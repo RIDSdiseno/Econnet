@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button, message } from "antd";
 import {
   MinusOutlined,
   PlusOutlined,
@@ -9,36 +9,14 @@ import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
+import {
+  obtenerCarrito,
+  actualizarCantidadCarrito,
+  eliminarProductoCarrito,
+} from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-
-const carritoInicial = [
-  {
-    id: 1,
-    nombre:
-      "Notebook HP Victus Gaming AMD Ryzen 7, 24GB RAM, RTX 5050, 1TB SSD",
-    marca: "HP",
-    categoria: "Notebook",
-    imagen: "/img/productos/notebook-hp.png",
-    precio: 1349480,
-    precioNormal: 1666650,
-    descuento: 19,
-    cantidad: 1,
-    stock: "Más de 20 unidades",
-  },
-  {
-    id: 2,
-    nombre: 'Monitor Gamer ASUS TUF 27" Full HD 180Hz',
-    marca: "ASUS",
-    categoria: "Monitores",
-    imagen: "/img/productos/monitor-asus.png",
-    precio: 224990,
-    precioNormal: 299990,
-    descuento: 25,
-    cantidad: 1,
-    stock: "Disponible",
-  },
-];
+import { useAuth } from "../context/AuthContext";
 
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
@@ -48,33 +26,150 @@ function formatearPrecio(valor) {
   }).format(valor);
 }
 
+function adaptarItemCarrito(item) {
+  const producto = item.producto;
+
+  const imagenPrincipal =
+    producto.imagenes?.find((imagen) => imagen.esPrincipal)?.url ||
+    producto.imagenes?.find((imagen) => imagen.tipo !== "oferta_wide")?.url ||
+    producto.imagenes?.[0]?.url ||
+    "/img/productos/producto.png";
+
+  return {
+    id: producto.id,
+    nombre: producto.nombre,
+    marca: producto.marca?.nombre || "Sin marca",
+    categoria: producto.categoria?.nombre || "Sin categoría",
+    imagen: imagenPrincipal,
+    precio: producto.precio,
+    precioNormal: producto.precio,
+    descuento: 0,
+    cantidad: item.cantidad,
+    stock: producto.stock > 0 ? `${producto.stock} unidades` : "No disponible",
+    stockNumero: producto.stock,
+  };
+}
+
 function Carrito() {
-  const [productosCarrito, setProductosCarrito] = useState(carritoInicial);
+  const navigate = useNavigate();
+  const { token, estaLogueado, cargandoAuth } = useAuth();
 
-  const aumentarCantidad = (id) => {
-    setProductosCarrito((productos) =>
-      productos.map((producto) =>
-        producto.id === id
-          ? { ...producto, cantidad: producto.cantidad + 1 }
-          : producto,
-      ),
+  const [productosCarrito, setProductosCarrito] = useState([]);
+  const [cargandoCarrito, setCargandoCarrito] = useState(true);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  useEffect(() => {
+    const cargarCarrito = async () => {
+      if (cargandoAuth) return;
+
+      if (!estaLogueado || !token) {
+        message.info("Inicia sesión para ver tu carrito");
+        navigate("/login");
+        return;
+      }
+
+      try {
+        setCargandoCarrito(true);
+
+        const data = await obtenerCarrito(token);
+        const productosAdaptados = data.items.map(adaptarItemCarrito);
+
+        setProductosCarrito(productosAdaptados);
+      } catch (error) {
+        message.error(error.message || "No se pudo cargar el carrito");
+      } finally {
+        setCargandoCarrito(false);
+      }
+    };
+
+    cargarCarrito();
+  }, [token, estaLogueado, cargandoAuth, navigate]);
+
+  const aumentarCantidad = async (id) => {
+    const productoActual = productosCarrito.find(
+      (producto) => producto.id === id,
     );
+
+    if (!productoActual) return;
+
+    const nuevaCantidad = productoActual.cantidad + 1;
+
+    if (nuevaCantidad > productoActual.stockNumero) {
+      message.warning("No hay stock suficiente");
+      return;
+    }
+
+    try {
+      setActualizandoId(id);
+
+      const itemActualizado = await actualizarCantidadCarrito(
+        token,
+        id,
+        nuevaCantidad,
+      );
+
+      const productoAdaptado = adaptarItemCarrito(itemActualizado);
+
+      setProductosCarrito((productos) =>
+        productos.map((producto) =>
+          producto.id === id ? productoAdaptado : producto,
+        ),
+      );
+    } catch (error) {
+      message.error(error.message || "No se pudo actualizar la cantidad");
+    } finally {
+      setActualizandoId(null);
+    }
   };
 
-  const disminuirCantidad = (id) => {
-    setProductosCarrito((productos) =>
-      productos.map((producto) =>
-        producto.id === id && producto.cantidad > 1
-          ? { ...producto, cantidad: producto.cantidad - 1 }
-          : producto,
-      ),
+  const disminuirCantidad = async (id) => {
+    const productoActual = productosCarrito.find(
+      (producto) => producto.id === id,
     );
+
+    if (!productoActual || productoActual.cantidad <= 1) return;
+
+    const nuevaCantidad = productoActual.cantidad - 1;
+
+    try {
+      setActualizandoId(id);
+
+      const itemActualizado = await actualizarCantidadCarrito(
+        token,
+        id,
+        nuevaCantidad,
+      );
+
+      const productoAdaptado = adaptarItemCarrito(itemActualizado);
+
+      setProductosCarrito((productos) =>
+        productos.map((producto) =>
+          producto.id === id ? productoAdaptado : producto,
+        ),
+      );
+    } catch (error) {
+      message.error(error.message || "No se pudo actualizar la cantidad");
+    } finally {
+      setActualizandoId(null);
+    }
   };
 
-  const eliminarProducto = (id) => {
-    setProductosCarrito((productos) =>
-      productos.filter((producto) => producto.id !== id),
-    );
+  const eliminarProducto = async (id) => {
+    try {
+      setActualizandoId(id);
+
+      await eliminarProductoCarrito(token, id);
+
+      setProductosCarrito((productos) =>
+        productos.filter((producto) => producto.id !== id),
+      );
+
+      message.success("Producto eliminado del carrito");
+    } catch (error) {
+      message.error(error.message || "No se pudo eliminar el producto");
+    } finally {
+      setActualizandoId(null);
+    }
   };
 
   const resumen = useMemo(() => {
@@ -100,6 +195,26 @@ function Carrito() {
       ),
     };
   }, [productosCarrito]);
+
+  if (cargandoAuth || cargandoCarrito) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-gray-900">
+        <Navbar />
+
+        <main className="max-w-7xl mx-auto px-8 py-20 text-center">
+          <h1 className="text-2xl font-black text-gray-900">
+            Cargando carrito...
+          </h1>
+
+          <p className="text-gray-600 mt-2">
+            Estamos obteniendo tus productos guardados.
+          </p>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -173,8 +288,9 @@ function Carrito() {
 
                       <button
                         type="button"
+                        disabled={actualizandoId === producto.id}
                         onClick={() => eliminarProducto(producto.id)}
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-600 transition"
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-50"
                       >
                         <DeleteOutlined />
                       </button>
@@ -236,8 +352,12 @@ function Carrito() {
                         <div className="mt-4 inline-flex items-center rounded-xl border border-gray-300 overflow-hidden">
                           <button
                             type="button"
+                            disabled={
+                              actualizandoId === producto.id ||
+                              producto.cantidad <= 1
+                            }
                             onClick={() => disminuirCantidad(producto.id)}
-                            className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition"
+                            className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
                           >
                             <MinusOutlined />
                           </button>
@@ -248,8 +368,12 @@ function Carrito() {
 
                           <button
                             type="button"
+                            disabled={
+                              actualizandoId === producto.id ||
+                              producto.cantidad >= producto.stockNumero
+                            }
                             onClick={() => aumentarCantidad(producto.id)}
-                            className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition"
+                            className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
                           >
                             <PlusOutlined />
                           </button>

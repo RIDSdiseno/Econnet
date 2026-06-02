@@ -62,9 +62,10 @@ model Producto {
   imagenes         ProductoImagen[]
   especificaciones EspecificacionProducto[]
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  favoritos Favorito[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  favoritos    Favorito[]
+  carritoItems CarritoItem[]
 
   @@map("productos")
 }
@@ -143,8 +144,9 @@ model Usuario {
   direcciones Direccion[]
   favoritos   Favorito[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  carritoItems CarritoItem[]
 
   @@map("usuarios")
 }
@@ -183,4 +185,20 @@ model Favorito {
 
   @@unique([usuarioId, productoId])
   @@map("favoritos")
+}
+
+model CarritoItem {
+  id         Int @id @default(autoincrement())
+  usuarioId  Int
+  productoId Int
+  cantidad   Int @default(1)
+
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([usuarioId, productoId])
+  @@map("carrito_items")
 }
