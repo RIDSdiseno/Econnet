@@ -21,6 +21,9 @@ import {
   crearDireccion,
   marcarDireccionPrincipal,
   eliminarDireccionUsuario,
+  obtenerFavoritos,
+  eliminarFavoritoUsuario,
+  cambiarPasswordUsuario,
 } from "../services/api";
 
 const pedidosUsuario = [
@@ -124,13 +127,35 @@ const obtenerComunasPorRegion = (regionSeleccionada) => {
 
 function MiCuenta() {
   const navigate = useNavigate();
-  const { usuario, token, cargandoAuth, estaLogueado, logout } = useAuth();
+  const {
+    usuario,
+    token,
+    cargandoAuth,
+    estaLogueado,
+    actualizarUsuario,
+    logout,
+  } = useAuth();
 
   const [seccionActiva, setSeccionActiva] = useState("datos");
   const [modalDireccion, setModalDireccion] = useState(false);
+  const [modalCelular, setModalCelular] = useState(false);
+  const [celularEditar, setCelularEditar] = useState("");
+  const [cargandoCelular, setCargandoCelular] = useState(false);
+
+  const [modalPassword, setModalPassword] = useState(false);
+  const [cargandoPassword, setCargandoPassword] = useState(false);
+
+  const [formPassword, setFormPassword] = useState({
+    passwordActual: "",
+    nuevaPassword: "",
+    confirmarPassword: "",
+  });
 
   const [direcciones, setDirecciones] = useState([]);
   const [cargandoDirecciones, setCargandoDirecciones] = useState(false);
+
+  const [favoritos, setFavoritos] = useState([]);
+  const [cargandoFavoritos, setCargandoFavoritos] = useState(false);
 
   const [nuevaDireccion, setNuevaDireccion] = useState({
     region: "",
@@ -167,10 +192,112 @@ function MiCuenta() {
     cargarDirecciones();
   }, [token, estaLogueado]);
 
+  useEffect(() => {
+    const cargarFavoritos = async () => {
+      if (!token || !estaLogueado) return;
+
+      try {
+        setCargandoFavoritos(true);
+
+        const data = await obtenerFavoritos(token);
+        setFavoritos(data);
+      } catch (error) {
+        message.error(error.message || "No se pudieron cargar los favoritos");
+      } finally {
+        setCargandoFavoritos(false);
+      }
+    };
+
+    cargarFavoritos();
+  }, [token, estaLogueado]);
+
   const cerrarSesion = () => {
     logout();
     message.success("Sesión cerrada");
     navigate("/");
+  };
+
+  const abrirModalCelular = () => {
+    const celularActual = usuario.telefono
+      ? usuario.telefono.replace("+56", "")
+      : "";
+
+    setCelularEditar(celularActual);
+    setModalCelular(true);
+  };
+
+  const guardarCelular = async () => {
+    const celularLimpio = celularEditar.trim().replace(/\s+/g, "");
+
+    if (!/^9\d{8}$/.test(celularLimpio)) {
+      message.warning("Ingresa un celular válido. Ejemplo: 912345678");
+      return;
+    }
+
+    try {
+      setCargandoCelular(true);
+
+      await actualizarUsuario({
+        telefono: celularLimpio,
+      });
+
+      message.success("Celular actualizado correctamente");
+      setModalCelular(false);
+    } catch (error) {
+      message.error(error.message || "No se pudo actualizar el celular");
+    } finally {
+      setCargandoCelular(false);
+    }
+  };
+
+  const abrirModalPassword = () => {
+    setFormPassword({
+      passwordActual: "",
+      nuevaPassword: "",
+      confirmarPassword: "",
+    });
+
+    setModalPassword(true);
+  };
+
+  const guardarPassword = async () => {
+    if (
+      !formPassword.passwordActual.trim() ||
+      !formPassword.nuevaPassword.trim() ||
+      !formPassword.confirmarPassword.trim()
+    ) {
+      message.warning("Completa todos los campos");
+      return;
+    }
+
+    if (formPassword.nuevaPassword.length < 6) {
+      message.warning("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    if (formPassword.nuevaPassword !== formPassword.confirmarPassword) {
+      message.warning("Las contraseñas nuevas no coinciden");
+      return;
+    }
+
+    try {
+      setCargandoPassword(true);
+
+      await cambiarPasswordUsuario(token, formPassword);
+
+      message.success("Contraseña actualizada correctamente");
+      setModalPassword(false);
+
+      setFormPassword({
+        passwordActual: "",
+        nuevaPassword: "",
+        confirmarPassword: "",
+      });
+    } catch (error) {
+      message.error(error.message || "No se pudo cambiar la contraseña");
+    } finally {
+      setCargandoPassword(false);
+    }
   };
 
   const agregarDireccion = async () => {
@@ -263,6 +390,20 @@ function MiCuenta() {
       message.error(
         error.message || "No se pudo actualizar la dirección principal",
       );
+    }
+  };
+
+  const quitarFavorito = async (productoId) => {
+    try {
+      await eliminarFavoritoUsuario(token, productoId);
+
+      setFavoritos((prev) =>
+        prev.filter((favorito) => favorito.productoId !== productoId),
+      );
+
+      message.success("Producto eliminado de favoritos");
+    } catch (error) {
+      message.error(error.message || "No se pudo eliminar el favorito");
     }
   };
 
@@ -367,18 +508,11 @@ function MiCuenta() {
 
                 <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-7">
                   <div className="border-b border-gray-200 pb-5 mb-5">
-                    <div className="flex justify-between gap-4">
-                      <div>
-                        <p className="font-bold text-gray-900">
-                          Nombre y apellidos
-                        </p>
-                        <p className="text-gray-600 mt-1">{usuario.nombre}</p>
-                      </div>
+                    <p className="font-bold text-gray-900">
+                      Nombre y apellidos
+                    </p>
 
-                      <button className="text-sm font-bold underline">
-                        Editar
-                      </button>
-                    </div>
+                    <p className="text-gray-600 mt-1">{usuario.nombre}</p>
                   </div>
 
                   <div className="border-b border-gray-200 pb-5 mb-5">
@@ -397,7 +531,11 @@ function MiCuenta() {
                         </p>
                       </div>
 
-                      <button className="text-sm font-bold underline">
+                      <button
+                        type="button"
+                        onClick={abrirModalCelular}
+                        className="text-sm font-bold underline"
+                      >
                         Editar
                       </button>
                     </div>
@@ -581,33 +719,139 @@ function MiCuenta() {
                     Mis listas
                   </h2>
 
-                  <Button
-                    size="large"
-                    className="!h-12 !rounded-2xl !font-bold"
-                  >
-                    Crear lista
-                  </Button>
+                  <Link to="/productos">
+                    <Button
+                      size="large"
+                      className="!h-12 !rounded-2xl !font-bold"
+                    >
+                      Explorar productos
+                    </Button>
+                  </Link>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 max-w-xl">
-                  <div className="h-52 bg-gray-100 rounded-xl flex items-center justify-center">
-                    <HeartOutlined className="text-6xl text-gray-300" />
+                {cargandoFavoritos && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center text-gray-600">
+                    Cargando favoritos...
                   </div>
+                )}
 
-                  <div className="mt-5 flex items-center justify-between">
-                    <div>
+                {!cargandoFavoritos && favoritos.length === 0 && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 max-w-xl">
+                    <div className="h-52 bg-gray-100 rounded-xl flex items-center justify-center">
+                      <HeartOutlined className="text-6xl text-gray-300" />
+                    </div>
+
+                    <div className="mt-5">
                       <h3 className="text-xl font-black text-gray-900">
                         Mis favoritos
                       </h3>
 
-                      <p className="text-gray-600">
-                        Agrega productos para comenzar.
+                      <p className="text-gray-600 mt-2">
+                        Aún no tienes productos guardados. Explora el catálogo y
+                        agrega productos a tu lista.
                       </p>
-                    </div>
 
-                    <RightOutlined />
+                      <Link to="/productos">
+                        <Button
+                          size="large"
+                          className="!mt-5 !rounded-xl !font-bold"
+                        >
+                          Ver productos
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {!cargandoFavoritos && favoritos.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {favoritos.map((favorito) => {
+                      const producto = favorito.producto;
+
+                      if (!producto) {
+                        return null;
+                      }
+
+                      const imagenPrincipal =
+                        producto.imagenes?.find(
+                          (imagen) => imagen.esPrincipal,
+                        ) ||
+                        producto.imagenes?.find(
+                          (imagen) => imagen.tipo !== "oferta_wide",
+                        ) ||
+                        producto.imagenes?.[0];
+
+                      const precioProducto = producto.precio || 0;
+
+                      return (
+                        <article
+                          key={favorito.id}
+                          className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+                        >
+                          <Link to={`/producto/${producto.id}`}>
+                            <div className="h-48 bg-gray-100 flex items-center justify-center p-5">
+                              <img
+                                src={
+                                  imagenPrincipal?.url ||
+                                  "/img/productos/producto.png"
+                                }
+                                alt={producto.nombre || "Producto favorito"}
+                                className="max-h-full max-w-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.src =
+                                    "/img/productos/producto.png";
+                                }}
+                              />
+                            </div>
+                          </Link>
+
+                          <div className="p-5">
+                            <p className="text-xs font-bold text-emerald-600 uppercase">
+                              {producto.marca?.nombre || "Econnet"}
+                            </p>
+
+                            <Link to={`/producto/${producto.id}`}>
+                              <h3 className="text-lg font-black text-gray-900 mt-1 hover:underline">
+                                {producto.nombre || "Producto sin nombre"}
+                              </h3>
+                            </Link>
+
+                            <p className="text-sm text-gray-500 mt-1">
+                              {producto.categoria?.nombre || "Sin categoría"}
+                            </p>
+
+                            <p className="text-2xl font-black text-gray-950 mt-4">
+                              {formatearPrecio(precioProducto)}
+                            </p>
+
+                            <div className="flex gap-3 mt-5">
+                              <Link
+                                to={`/producto/${producto.id}`}
+                                className="flex-1"
+                              >
+                                <Button
+                                  block
+                                  size="large"
+                                  className="!rounded-xl !font-bold"
+                                >
+                                  Ver producto
+                                </Button>
+                              </Link>
+
+                              <Button
+                                size="large"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => quitarFavorito(producto.id)}
+                                className="!rounded-xl !font-bold"
+                              />
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -629,7 +873,11 @@ function MiCuenta() {
                       </p>
                     </div>
 
-                    <button className="text-sm font-bold underline">
+                    <button
+                      type="button"
+                      onClick={abrirModalPassword}
+                      className="text-sm font-bold underline"
+                    >
                       Editar
                     </button>
                   </div>
@@ -791,6 +1039,146 @@ function MiCuenta() {
               className="!bg-gray-950 !border-gray-950 !font-bold hover:!bg-black !rounded-xl"
             >
               Guardar dirección
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={modalCelular}
+        onCancel={() => setModalCelular(false)}
+        footer={null}
+        centered
+        title="Editar celular"
+      >
+        <div className="space-y-4 pt-3">
+          <div>
+            <label className="text-sm font-bold text-gray-800">
+              Nuevo celular
+            </label>
+
+            <Input
+              size="large"
+              addonBefore="+56"
+              placeholder="912345678"
+              value={celularEditar}
+              onChange={(e) => setCelularEditar(e.target.value)}
+              className="!mt-2 !rounded-xl"
+            />
+
+            <p className="text-xs text-gray-500 mt-2">
+              Ingresa tu número sin espacios y sin +56.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <Button
+              size="large"
+              onClick={() => setModalCelular(false)}
+              className="!rounded-xl !font-bold"
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              size="large"
+              type="primary"
+              loading={cargandoCelular}
+              onClick={guardarCelular}
+              className="!bg-gray-950 !border-gray-950 !font-bold hover:!bg-black !rounded-xl"
+            >
+              Guardar cambios
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={modalPassword}
+        onCancel={() => setModalPassword(false)}
+        footer={null}
+        centered
+        title="Cambiar contraseña"
+      >
+        <div className="space-y-4 pt-3">
+          <div>
+            <label className="text-sm font-bold text-gray-800">
+              Contraseña actual
+            </label>
+
+            <Input.Password
+              size="large"
+              placeholder="Ingresa tu contraseña actual"
+              value={formPassword.passwordActual}
+              onChange={(e) =>
+                setFormPassword((prev) => ({
+                  ...prev,
+                  passwordActual: e.target.value,
+                }))
+              }
+              className="!mt-2 !rounded-xl"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-800">
+              Nueva contraseña
+            </label>
+
+            <Input.Password
+              size="large"
+              placeholder="Ingresa tu nueva contraseña"
+              value={formPassword.nuevaPassword}
+              onChange={(e) =>
+                setFormPassword((prev) => ({
+                  ...prev,
+                  nuevaPassword: e.target.value,
+                }))
+              }
+              className="!mt-2 !rounded-xl"
+            />
+
+            <p className="text-xs text-gray-500 mt-2">
+              Debe tener al menos 6 caracteres.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-800">
+              Confirmar nueva contraseña
+            </label>
+
+            <Input.Password
+              size="large"
+              placeholder="Repite tu nueva contraseña"
+              value={formPassword.confirmarPassword}
+              onChange={(e) =>
+                setFormPassword((prev) => ({
+                  ...prev,
+                  confirmarPassword: e.target.value,
+                }))
+              }
+              className="!mt-2 !rounded-xl"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <Button
+              size="large"
+              onClick={() => setModalPassword(false)}
+              className="!rounded-xl !font-bold"
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              size="large"
+              type="primary"
+              loading={cargandoPassword}
+              onClick={guardarPassword}
+              className="!bg-gray-950 !border-gray-950 !font-bold hover:!bg-black !rounded-xl"
+            >
+              Guardar cambios
             </Button>
           </div>
         </div>

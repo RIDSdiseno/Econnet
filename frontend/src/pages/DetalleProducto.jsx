@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Link, useParams } from "react-router-dom";
-import { Button, Rate, Input, Carousel } from "antd";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { Button, Rate, Input, Carousel, message } from "antd";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { obtenerProductoPorId, obtenerProductos } from "../services/api";
+import {
+  LeftOutlined,
+  RightOutlined,
+  HeartOutlined,
+  HeartFilled,
+} from "@ant-design/icons";
+import {
+  obtenerProductoPorId,
+  obtenerProductos,
+  obtenerFavoritos,
+  agregarFavorito,
+  eliminarFavoritoUsuario,
+} from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -183,12 +195,17 @@ function ValoracionesProducto({ producto }) {
 
 function DetalleProducto() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { token, estaLogueado } = useAuth();
 
   const [producto, setProducto] = useState(null);
   const [productosRelacionados, setProductosRelacionados] = useState([]);
   const [imagenSeleccionada, setImagenSeleccionada] = useState("");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+
+  const [esFavorito, setEsFavorito] = useState(false);
+  const [cargandoFavorito, setCargandoFavorito] = useState(false);
 
   useEffect(() => {
     const cargarProducto = async () => {
@@ -229,6 +246,57 @@ function DetalleProducto() {
 
     cargarProducto();
   }, [id]);
+
+  useEffect(() => {
+    const cargarFavorito = async () => {
+      if (!token || !estaLogueado || !id) {
+        setEsFavorito(false);
+        return;
+      }
+
+      try {
+        const favoritos = await obtenerFavoritos(token);
+
+        const existe = favoritos.some(
+          (favorito) => Number(favorito.productoId) === Number(id),
+        );
+
+        setEsFavorito(existe);
+      } catch (error) {
+        console.error("Error al cargar favorito:", error);
+      }
+    };
+
+    cargarFavorito();
+  }, [token, estaLogueado, id]);
+
+  const toggleFavorito = async () => {
+    if (!producto) return;
+
+    if (!estaLogueado || !token) {
+      message.info("Inicia sesión para guardar productos favoritos");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setCargandoFavorito(true);
+
+      if (esFavorito) {
+        await eliminarFavoritoUsuario(token, producto.id);
+        setEsFavorito(false);
+        message.success("Producto eliminado de favoritos");
+      } else {
+        await agregarFavorito(token, producto.id);
+        setEsFavorito(true);
+        message.success("Producto agregado a favoritos");
+      }
+    } catch (error) {
+      message.error(error.message || "No se pudo actualizar favoritos");
+    } finally {
+      setCargandoFavorito(false);
+    }
+  };
 
   if (cargando) {
     return (
@@ -413,7 +481,8 @@ function DetalleProducto() {
                 Marca: {marcaNombre}
               </p>
 
-              <div className="mt-6 space-y-3">
+              
+              <div className="mt-6 flex flex-col gap-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Precio normal</span>
                   <span className="text-gray-400 line-through">
@@ -444,7 +513,7 @@ function DetalleProducto() {
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-6 flex flex-col gap-4">
                 <Button
                   block
                   size="large"
@@ -460,6 +529,21 @@ function DetalleProducto() {
                   className="!h-12 !rounded-xl !bg-gray-950 !font-bold hover:!bg-black"
                 >
                   Comprar ahora
+                </Button>
+
+                <Button
+                  block
+                  size="large"
+                  loading={cargandoFavorito}
+                  icon={esFavorito ? <HeartFilled /> : <HeartOutlined />}
+                  onClick={toggleFavorito}
+                  className={`!h-12 !rounded-xl !font-bold ${
+                    esFavorito
+                      ? "!border-red-200 !text-red-500 hover:!border-red-300 hover:!text-red-600"
+                      : "!border-gray-300 !text-gray-800 hover:!border-red-300 hover:!text-red-500"
+                  }`}
+                >
+                  {esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
                 </Button>
               </div>
 

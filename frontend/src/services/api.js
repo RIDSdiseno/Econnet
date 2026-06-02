@@ -175,3 +175,91 @@ export const eliminarDireccionUsuario = async (token, id) => {
 
   return data;
 };
+
+export const obtenerFavoritos = async (token) => {
+  const respuesta = await fetch(`${API_URL}/favoritos`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al obtener favoritos");
+  }
+
+  return data.favoritos;
+};
+
+export const agregarFavorito = async (token, productoId) => {
+  const respuesta = await fetch(`${API_URL}/favoritos/${productoId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al agregar favorito");
+  }
+
+  return data.favorito;
+};
+
+export const eliminarFavoritoUsuario = async (token, productoId) => {
+  const respuesta = await fetch(`${API_URL}/favoritos/${productoId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al eliminar favorito");
+  }
+
+  return data;
+};
+
+export const actualizarPerfil = async (token, datos) => {
+  const respuesta = await fetch(`${API_URL}/auth/perfil`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(datos),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al actualizar perfil");
+  }
+
+  return data.usuario;
+};
+
+export const cambiarPasswordUsuario = async (token, datos) => {
+  const respuesta = await fetch(`${API_URL}/auth/password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(datos),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al cambiar contraseña");
+  }
+
+  return data;
+};

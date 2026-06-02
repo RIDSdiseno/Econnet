@@ -8,101 +8,103 @@ datasource db {
 }
 
 model Categoria {
-  id          Int        @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   nombre      String
-  slug        String     @unique
+  slug        String  @unique
   descripcion String?
   imagenUrl   String?
-  activo      Boolean    @default(true)
+  activo      Boolean @default(true)
 
-  productos   Producto[]
+  productos Producto[]
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("categorias")
 }
 
 model Marca {
-  id          Int      @id @default(autoincrement())
-  nombre      String   @unique
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
   logoUrl     String?
-  activo      Boolean  @default(true)
-  mostrarHome Boolean  @default(false)
-  grupo       String   @default("otras")
-  orden       Int      @default(0)
+  activo      Boolean @default(true)
+  mostrarHome Boolean @default(false)
+  grupo       String  @default("otras")
+  orden       Int     @default(0)
 
-  productos   Producto[]
+  productos Producto[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("marcas")
 }
 
 model Producto {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   nombre      String
-  slug        String   @unique
+  slug        String  @unique
   descripcion String?
   precio      Int
-  stock       Int      @default(0)
-  sku         String?  @unique
+  stock       Int     @default(0)
+  sku         String? @unique
   modelo      String?
   garantia    String?
-  activo      Boolean  @default(true)
+  activo      Boolean @default(true)
 
   categoriaId Int
   marcaId     Int?
 
-  categoria   Categoria @relation(fields: [categoriaId], references: [id])
-  marca       Marca?    @relation(fields: [marcaId], references: [id], onDelete: SetNull)
+  categoria Categoria @relation(fields: [categoriaId], references: [id])
+  marca     Marca?    @relation(fields: [marcaId], references: [id], onDelete: SetNull)
 
-  imagenes        ProductoImagen[]
+  imagenes         ProductoImagen[]
   especificaciones EspecificacionProducto[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  favoritos Favorito[]
 
   @@map("productos")
 }
 
 model ProductoImagen {
-  id          Int      @id @default(autoincrement())
-  productoId  Int
+  id         Int @id @default(autoincrement())
+  productoId Int
 
   url         String
   publicId    String?
-  esPrincipal Boolean  @default(false)
-  orden       Int      @default(0)
-  tipo        String   @default("galeria")
+  esPrincipal Boolean @default(false)
+  orden       Int     @default(0)
+  tipo        String  @default("galeria")
 
-  producto    Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("producto_imagenes")
 }
 
 model EspecificacionProducto {
-  id         Int      @id @default(autoincrement())
+  id         Int @id @default(autoincrement())
   productoId Int
 
-  nombre     String
-  valor      String
-  orden      Int      @default(0)
+  nombre String
+  valor  String
+  orden  Int    @default(0)
 
-  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("producto_especificaciones")
 }
+
 model Anuncio {
-  id        Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   titulo    String?
   subtitulo String?
@@ -111,10 +113,10 @@ model Anuncio {
   publicId  String?
 
   enlace    String
-  ubicacion String   @default("promo_horizontal")
+  ubicacion String @default("promo_horizontal")
 
-  activo    Boolean  @default(true)
-  orden     Int      @default(0)
+  activo Boolean @default(true)
+  orden  Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,32 +125,33 @@ model Anuncio {
 }
 
 model Usuario {
-  id                Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  nombre            String
-  email             String   @unique
-  passwordHash      String
-  telefono          String?
-  rut               String?  @unique
+  nombre       String
+  email        String  @unique
+  passwordHash String
+  telefono     String?
+  rut          String? @unique
 
-  aceptaTerminos    Boolean  @default(false)
-  aceptaPromociones Boolean  @default(false)
-  aceptaPublicidad  Boolean  @default(false)
+  aceptaTerminos    Boolean @default(false)
+  aceptaPromociones Boolean @default(false)
+  aceptaPublicidad  Boolean @default(false)
 
-  rol               String   @default("cliente")
-  activo            Boolean  @default(true)
+  rol    String  @default("cliente")
+  activo Boolean @default(true)
 
-  direcciones       Direccion[]
+  direcciones Direccion[]
+  favoritos   Favorito[]
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("usuarios")
 }
 
 model Direccion {
-  id           Int      @id @default(autoincrement())
-  usuarioId    Int
+  id        Int @id @default(autoincrement())
+  usuarioId Int
 
   nombre       String?
   direccion    String
@@ -158,12 +161,26 @@ model Direccion {
   numero       String?
   departamento String?
   telefono     String?
-  principal    Boolean  @default(false)
+  principal    Boolean @default(false)
 
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("direcciones")
+}
+
+model Favorito {
+  id         Int @id @default(autoincrement())
+  usuarioId  Int
+  productoId Int
+
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([usuarioId, productoId])
+  @@map("favoritos")
 }

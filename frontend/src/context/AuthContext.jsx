@@ -3,6 +3,7 @@ import {
   loginUsuario,
   obtenerPerfil,
   registrarUsuario,
+  actualizarPerfil,
 } from "../services/api";
 
 const AuthContext = createContext();
@@ -57,6 +58,18 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const actualizarUsuario = async (datos) => {
+    if (!token) {
+      throw new Error("No hay sesión activa");
+    }
+
+    const usuarioActualizado = await actualizarPerfil(token, datos);
+
+    setUsuario(usuarioActualizado);
+
+    return usuarioActualizado;
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
@@ -74,6 +87,7 @@ export function AuthProvider({ children }) {
         estaLogueado,
         registrar,
         login,
+        actualizarUsuario,
         logout,
       }}
     >

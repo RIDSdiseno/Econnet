@@ -1,14 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { Checkbox, Select, Button, Pagination } from "antd";
-import { ShoppingCartOutlined, FilterOutlined } from "@ant-design/icons";
+import { Checkbox, Select, Button, Pagination, message } from "antd";
+import {
+  ShoppingCartOutlined,
+  FilterOutlined,
+  HeartOutlined,
+  HeartFilled,
+} from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
   obtenerProductos,
   obtenerCategorias,
   obtenerMarcas,
+  obtenerFavoritos,
+  agregarFavorito,
+  eliminarFavoritoUsuario,
 } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const rangosPrecio = [
   {
@@ -183,18 +192,46 @@ function SidebarFiltros({
   );
 }
 
-function ProductoCard({ producto }) {
+function ProductoCard({
+  producto,
+  esFavorito,
+  cargandoFavorito,
+  onToggleFavorito,
+}) {
   return (
     <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group h-full">
-      <Link to={`/producto/${producto.id}`}>
-        <div className="h-44 bg-white flex items-center justify-center p-4">
-          <img
-            src={producto.imagen}
-            alt={producto.nombre}
-            className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
-          />
-        </div>
-      </Link>
+      <div className="relative">
+        <Link to={`/producto/${producto.id}`}>
+          <div className="h-44 bg-white flex items-center justify-center p-4">
+            <img
+              src={producto.imagen}
+              alt={producto.nombre}
+              className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
+              onError={(e) => {
+                e.currentTarget.src = "/img/productos/producto.png";
+              }}
+            />
+          </div>
+        </Link>
+
+        <button
+          type="button"
+          disabled={cargandoFavorito}
+          onClick={() => onToggleFavorito(producto)}
+          className={`absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center shadow-sm border transition ${
+            esFavorito
+              ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
+              : "bg-white border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200"
+          }`}
+          title={esFavorito ? "Quitar de favoritos" : "Agregar a favoritos"}
+        >
+          {esFavorito ? (
+            <HeartFilled className="text-lg" />
+          ) : (
+            <HeartOutlined className="text-lg" />
+          )}
+        </button>
+      </div>
 
       <div className="p-4 pt-2">
         <div className="flex justify-end min-h-[24px]">
@@ -248,6 +285,7 @@ function ProductoCard({ producto }) {
 function Productos() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { token, estaLogueado } = useAuth();
   const categoriaUrl = searchParams.get("categoria");
   const marcaUrl = searchParams.get("marca");
   const [productos, setProductos] = useState([]);
@@ -262,6 +300,8 @@ function Productos() {
   const [soloDisponibles, setSoloDisponibles] = useState(false);
   const [soloOfertas, setSoloOfertas] = useState(false);
   const [orden, setOrden] = useState("relevancia");
+  const [favoritosIds, setFavoritosIds] = useState([]);
+  const [cargandoFavoritoId, setCargandoFavoritoId] = useState(null);
 
   const [paginaActual, setPaginaActual] = useState(1);
   const productosPorPagina = 6;
@@ -308,6 +348,27 @@ function Productos() {
 
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    const cargarFavoritos = async () => {
+      if (!token || !estaLogueado) {
+        setFavoritosIds([]);
+        return;
+      }
+
+      try {
+        const favoritos = await obtenerFavoritos(token);
+
+        setFavoritosIds(
+          favoritos.map((favorito) => favorito.productoId).filter(Boolean),
+        );
+      } catch (error) {
+        console.error("Error al cargar favoritos:", error);
+      }
+    };
+
+    cargarFavoritos();
+  }, [token, estaLogueado]);
 
   useEffect(() => {
     if (categoriaUrl) {
@@ -398,6 +459,36 @@ function Productos() {
     soloOfertas,
     orden,
   ]);
+
+  const toggleFavorito = async (producto) => {
+    if (!estaLogueado || !token) {
+      message.info("Inicia sesión para guardar productos favoritos");
+      navigate("/login");
+      return;
+    }
+
+    const yaEsFavorito = favoritosIds.includes(producto.id);
+
+    try {
+      setCargandoFavoritoId(producto.id);
+
+      if (yaEsFavorito) {
+        await eliminarFavoritoUsuario(token, producto.id);
+
+        setFavoritosIds((prev) => prev.filter((id) => id !== producto.id));
+        message.success("Producto eliminado de favoritos");
+      } else {
+        await agregarFavorito(token, producto.id);
+
+        setFavoritosIds((prev) => [...prev, producto.id]);
+        message.success("Producto agregado a favoritos");
+      }
+    } catch (error) {
+      message.error(error.message || "No se pudo actualizar favoritos");
+    } finally {
+      setCargandoFavoritoId(null);
+    }
+  };
 
   const limpiarFiltros = () => {
     setCategoriasSeleccionadas([]);
@@ -521,7 +612,13 @@ function Productos() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                   {productosPaginados.map((producto) => (
-                    <ProductoCard key={producto.id} producto={producto} />
+                    <ProductoCard
+                      key={producto.id}
+                      producto={producto}
+                      esFavorito={favoritosIds.includes(producto.id)}
+                      cargandoFavorito={cargandoFavoritoId === producto.id}
+                      onToggleFavorito={toggleFavorito}
+                    />
                   ))}
                 </div>
 

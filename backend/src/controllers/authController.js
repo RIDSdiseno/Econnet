@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
 
+
 const generarToken = (usuario) => {
     return jwt.sign(
         {
@@ -189,4 +190,152 @@ export const obtenerPerfil = async (req, res) => {
             error: error.message,
         });
     }
+};
+
+export const actualizarPerfil = async (req, res) => {
+  try {
+    const { telefono, aceptaPromociones, aceptaPublicidad } = req.body;
+
+    const datosActualizar = {};
+
+    if (telefono !== undefined) {
+      let telefonoLimpio = String(telefono).trim().replace(/\s+/g, "");
+
+      if (/^9\d{8}$/.test(telefonoLimpio)) {
+        telefonoLimpio = `+56${telefonoLimpio}`;
+      }
+
+      if (/^569\d{8}$/.test(telefonoLimpio)) {
+        telefonoLimpio = `+${telefonoLimpio}`;
+      }
+
+      if (!/^\+569\d{8}$/.test(telefonoLimpio)) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Ingresa un celular válido. Ejemplo: 912345678",
+        });
+      }
+
+      datosActualizar.telefono = telefonoLimpio;
+    }
+
+    if (aceptaPromociones !== undefined) {
+      datosActualizar.aceptaPromociones = Boolean(aceptaPromociones);
+    }
+
+    if (aceptaPublicidad !== undefined) {
+      datosActualizar.aceptaPublicidad = Boolean(aceptaPublicidad);
+    }
+
+    const usuarioActualizado = await prisma.usuario.update({
+      where: {
+        id: req.usuario.id,
+      },
+      data: datosActualizar,
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        telefono: true,
+        rut: true,
+        aceptaTerminos: true,
+        aceptaPromociones: true,
+        aceptaPublicidad: true,
+        rol: true,
+        activo: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({
+      ok: true,
+      mensaje: "Perfil actualizado correctamente",
+      usuario: usuarioActualizado,
+    });
+  } catch (error) {
+    console.error("Error al actualizar perfil:", error);
+
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al actualizar perfil",
+      error: error.message,
+    });
+  }
+};
+
+export const cambiarPassword = async (req, res) => {
+  try {
+    const { passwordActual, nuevaPassword, confirmarPassword } = req.body;
+
+    if (!passwordActual || !nuevaPassword || !confirmarPassword) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Todos los campos son obligatorios",
+      });
+    }
+
+    if (nuevaPassword.length < 6) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La nueva contraseña debe tener al menos 6 caracteres",
+      });
+    }
+
+    if (nuevaPassword !== confirmarPassword) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Las contraseñas nuevas no coinciden",
+      });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: {
+        id: req.usuario.id,
+      },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Usuario no encontrado",
+      });
+    }
+
+    const passwordCorrecta = await bcrypt.compare(
+      passwordActual,
+      usuario.passwordHash,
+    );
+
+    if (!passwordCorrecta) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "La contraseña actual no es correcta",
+      });
+    }
+
+    const nuevaPasswordHash = await bcrypt.hash(nuevaPassword, 10);
+
+    await prisma.usuario.update({
+      where: {
+        id: req.usuario.id,
+      },
+      data: {
+        passwordHash: nuevaPasswordHash,
+      },
+    });
+
+    res.json({
+      ok: true,
+      mensaje: "Contraseña actualizada correctamente",
+    });
+  } catch (error) {
+    console.error("Error al cambiar contraseña:", error);
+
+    res.status(500).json({
+      ok: false,
+      mensaje: "Error al cambiar contraseña",
+      error: error.message,
+    });
+  }
 };
