@@ -349,3 +349,83 @@ export const vaciarCarritoUsuario = async (token) => {
 
   return data;
 };
+
+
+export const crearPedido = async (token, datos) => {
+  const respuesta = await fetch(`${API_URL}/pedidos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(datos),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al crear pedido");
+  }
+
+  return data.pedido;
+};
+
+export const obtenerPedidos = async (token) => {
+  const respuesta = await fetch(`${API_URL}/pedidos`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al obtener pedidos");
+  }
+
+  return data.pedidos;
+};
+
+export const obtenerPedidoPorId = async (token, id) => {
+  const respuesta = await fetch(`${API_URL}/pedidos/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al obtener pedido");
+  }
+
+  return data.pedido;
+};
+
+
+export const calcularDespacho = async (token, tipoEntrega, direccionId) => {
+  const params = new URLSearchParams({
+    tipoEntrega,
+  });
+
+  if (direccionId) {
+    params.append("direccionId", direccionId);
+  }
+
+  const respuesta = await fetch(
+    `${API_URL}/despacho/calcular?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al calcular despacho");
+  }
+
+  return data.despacho;
+};

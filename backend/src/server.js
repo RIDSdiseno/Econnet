@@ -11,6 +11,9 @@ import authRoutes from "./routes/authRoutes.js";
 import direccionRoutes from "./routes/direccionRoutes.js";
 import favoritoRoutes from "./routes/favoritoRoutes.js";
 import carritoRoutes from "./routes/carritoRoutes.js";
+import pedidoRoutes from "./routes/pedidoRoutes.js";
+import despachoRoutes from "./routes/despachoRoutes.js";
+
 
 dotenv.config();
 
@@ -34,6 +37,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/direcciones", direccionRoutes);
 app.use("/api/favoritos", favoritoRoutes);
 app.use("/api/carrito", carritoRoutes);
+app.use("/api/pedidos", pedidoRoutes);
+app.use("/api/despacho", despachoRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend de Econnet funcionando correctamente");

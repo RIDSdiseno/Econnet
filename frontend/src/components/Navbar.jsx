@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Input, Badge, Dropdown } from "antd";
 import {
   SearchOutlined,
@@ -6,8 +7,9 @@ import {
   MenuOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { obtenerCarrito } from "../services/api";
 
 const categoriasRapidas = [
   {
@@ -37,7 +39,7 @@ const categoriasRapidas = [
     label: (
       <Link
         to={`/productos?categoria=${encodeURIComponent(
-          "Cámara de seguridad"
+          "Cámara de seguridad",
         )}`}
       >
         Cámaras de seguridad
@@ -56,14 +58,62 @@ const categoriasRapidas = [
 
 function Navbar() {
   const navigate = useNavigate();
-  const { usuario, estaLogueado, logout, cargandoAuth } = useAuth();
+  const location = useLocation();
+
+  const { usuario, token, estaLogueado, logout, cargandoAuth } = useAuth();
+
+  const [busqueda, setBusqueda] = useState("");
+  const [cantidadCarrito, setCantidadCarrito] = useState(0);
 
   const primerNombre = usuario?.nombre?.split(" ")[0] || "Usuario";
 
   const cerrarSesion = () => {
     logout();
+    setCantidadCarrito(0);
     navigate("/");
   };
+
+  const buscarProductos = () => {
+    const texto = busqueda.trim();
+
+    if (!texto) {
+      navigate("/productos");
+      return;
+    }
+
+    navigate(`/productos?buscar=${encodeURIComponent(texto)}`);
+  };
+
+  useEffect(() => {
+    const cargarCantidadCarrito = async () => {
+      if (cargandoAuth) return;
+
+      if (!estaLogueado || !token) {
+        setCantidadCarrito(0);
+        return;
+      }
+
+      try {
+        const carrito = await obtenerCarrito(token);
+
+        const cantidad = (carrito.items || []).reduce((total, item) => {
+          return total + item.cantidad;
+        }, 0);
+
+        setCantidadCarrito(cantidad);
+      } catch (error) {
+        setCantidadCarrito(0);
+      }
+    };
+
+    cargarCantidadCarrito();
+  }, [
+    token,
+    estaLogueado,
+    cargandoAuth,
+    location.pathname,
+    location.search,
+  ]);
 
   const menuUsuario = [
     {
@@ -121,6 +171,18 @@ function Navbar() {
               size="large"
               placeholder="Buscar productos, marcas y categorías..."
               prefix={<SearchOutlined className="text-gray-500" />}
+              suffix={
+                <button
+                  type="button"
+                  onClick={buscarProductos}
+                  className="text-gray-500 hover:text-gray-900 transition"
+                >
+                  <SearchOutlined />
+                </button>
+              }
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onPressEnter={buscarProductos}
               className="!h-12 !rounded-xl"
             />
           </div>
@@ -191,7 +253,12 @@ function Navbar() {
             to="/carrito"
             className="relative flex items-center justify-center w-12 h-12 rounded-xl border border-gray-500 bg-white/10 hover:bg-white/20 transition"
           >
-            <Badge count={2} size="small">
+            <Badge
+              count={cantidadCarrito}
+              size="small"
+              showZero={false}
+              overflowCount={99}
+            >
               <ShoppingCartOutlined className="text-2xl !text-white" />
             </Badge>
           </Link>
@@ -203,6 +270,18 @@ function Navbar() {
             size="large"
             placeholder="Buscar productos..."
             prefix={<SearchOutlined className="text-gray-500" />}
+            suffix={
+              <button
+                type="button"
+                onClick={buscarProductos}
+                className="text-gray-500 hover:text-gray-900 transition"
+              >
+                <SearchOutlined />
+              </button>
+            }
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onPressEnter={buscarProductos}
             className="!h-12 !rounded-xl"
           />
         </div>

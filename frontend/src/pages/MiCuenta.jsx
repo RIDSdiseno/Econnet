@@ -23,19 +23,11 @@ import {
   eliminarDireccionUsuario,
   obtenerFavoritos,
   eliminarFavoritoUsuario,
+  obtenerPedidos,
   cambiarPasswordUsuario,
 } from "../services/api";
+import { opcionesRegiones } from "../data/regionesComunasChile";
 
-const pedidosUsuario = [
-  {
-    id: 1,
-    numero: "EC-2026-0001",
-    fecha: "25/05/2026",
-    estado: "Preparando pedido",
-    total: 1574470,
-    productos: 2,
-  },
-];
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
     style: "currency",
@@ -77,54 +69,6 @@ const menuCuenta = [
   },
 ];
 
-const regionesComunas = [
-  {
-    value: "Región Metropolitana",
-    label: "Región Metropolitana",
-    comunas: [
-      "Santiago",
-      "Providencia",
-      "Las Condes",
-      "Ñuñoa",
-      "La Florida",
-      "Puente Alto",
-      "Maipú",
-      "San Bernardo",
-      "Quilicura",
-      "Pudahuel",
-    ],
-  },
-  {
-    value: "Valparaíso",
-    label: "Valparaíso",
-    comunas: [
-      "Valparaíso",
-      "Viña del Mar",
-      "Quilpué",
-      "Villa Alemana",
-      "Concón",
-    ],
-  },
-];
-
-const opcionesRegiones = regionesComunas.map((region) => ({
-  value: region.value,
-  label: region.label,
-}));
-
-const obtenerComunasPorRegion = (regionSeleccionada) => {
-  const region = regionesComunas.find(
-    (item) => item.value === regionSeleccionada,
-  );
-
-  if (!region) return [];
-
-  return region.comunas.map((comuna) => ({
-    value: comuna,
-    label: comuna,
-  }));
-};
-
 function MiCuenta() {
   const navigate = useNavigate();
   const {
@@ -156,6 +100,8 @@ function MiCuenta() {
 
   const [favoritos, setFavoritos] = useState([]);
   const [cargandoFavoritos, setCargandoFavoritos] = useState(false);
+  const [pedidos, setPedidos] = useState([]);
+  const [cargandoPedidos, setCargandoPedidos] = useState(false);
 
   const [nuevaDireccion, setNuevaDireccion] = useState({
     region: "",
@@ -209,6 +155,25 @@ function MiCuenta() {
     };
 
     cargarFavoritos();
+  }, [token, estaLogueado]);
+
+  useEffect(() => {
+    const cargarPedidos = async () => {
+      if (!token || !estaLogueado) return;
+
+      try {
+        setCargandoPedidos(true);
+
+        const data = await obtenerPedidos(token);
+        setPedidos(data);
+      } catch (error) {
+        message.error(error.message || "No se pudieron cargar los pedidos");
+      } finally {
+        setCargandoPedidos(false);
+      }
+    };
+
+    cargarPedidos();
   }, [token, estaLogueado]);
 
   const cerrarSesion = () => {
@@ -308,6 +273,10 @@ function MiCuenta() {
       !nuevaDireccion.numero.trim()
     ) {
       message.warning("Completa región, comuna, calle y número");
+      return;
+    }
+    if (nuevaDireccion.comuna.trim().length < 3) {
+      message.warning("La comuna debe tener al menos 3 caracteres");
       return;
     }
 
@@ -635,59 +604,110 @@ function MiCuenta() {
                   Mis pedidos
                 </h2>
 
-                <div className="space-y-5">
-                  {pedidosUsuario.map((pedido) => (
-                    <article
-                      key={pedido.id}
-                      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <ShoppingOutlined className="text-2xl text-gray-900" />
+                {cargandoPedidos && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center text-gray-600">
+                    Cargando pedidos...
+                  </div>
+                )}
 
+                {!cargandoPedidos && pedidos.length === 0 && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+                    <ShoppingOutlined className="text-4xl text-gray-400 mb-4" />
+
+                    <h3 className="text-xl font-black text-gray-900">
+                      No tienes pedidos realizados
+                    </h3>
+
+                    <p className="text-gray-600 mt-2">
+                      Cuando finalices una compra, aparecerá aquí el historial
+                      de tus pedidos.
+                    </p>
+
+                    <Link to="/productos">
+                      <Button
+                        size="large"
+                        className="!mt-5 !rounded-xl !font-bold"
+                      >
+                        Ver productos
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+
+                {!cargandoPedidos && pedidos.length > 0 && (
+                  <div className="space-y-5">
+                    {pedidos.map((pedido) => {
+                      const fechaPedido = new Date(
+                        pedido.createdAt,
+                      ).toLocaleDateString("es-CL", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      });
+
+                      return (
+                        <article
+                          key={pedido.id}
+                          className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                              <h3 className="text-xl font-black text-gray-900">
-                                Pedido {pedido.numero}
-                              </h3>
+                              <div className="flex items-center gap-3">
+                                <ShoppingOutlined className="text-2xl text-gray-900" />
 
-                              <p className="text-sm text-gray-500">
-                                Realizado el {pedido.fecha}
+                                <div>
+                                  <h3 className="text-xl font-black text-gray-900">
+                                    Pedido {pedido.numero}
+                                  </h3>
+
+                                  <p className="text-sm text-gray-500">
+                                    Realizado el {fechaPedido}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-3 mt-4">
+                                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                                  {pedido.estado}
+                                </span>
+
+                                <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full">
+                                  {pedido.items?.length || 0} producto
+                                  {(pedido.items?.length || 0) !== 1 ? "s" : ""}
+                                </span>
+
+                                <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full">
+                                  {pedido.tipoEntrega === "despacho"
+                                    ? "Despacho a domicilio"
+                                    : "Retiro en tienda"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="md:text-right">
+                              <p className="text-sm text-gray-500">Total</p>
+
+                              <p className="text-2xl font-black text-gray-950">
+                                {formatearPrecio(pedido.total)}
                               </p>
+
+                              <Link
+                                to={`/seguimiento-compra?pedidoId=${pedido.id}`}
+                              >
+                                <Button
+                                  size="large"
+                                  className="!mt-4 !rounded-xl !font-bold"
+                                >
+                                  Ver seguimiento
+                                </Button>
+                              </Link>
                             </div>
                           </div>
-
-                          <div className="flex flex-wrap gap-3 mt-4">
-                            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                              {pedido.estado}
-                            </span>
-
-                            <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full">
-                              {pedido.productos} productos
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="md:text-right">
-                          <p className="text-sm text-gray-500">Total</p>
-
-                          <p className="text-2xl font-black text-gray-950">
-                            {formatearPrecio(pedido.total)}
-                          </p>
-
-                          <Link to="/seguimiento-compra">
-                            <Button
-                              size="large"
-                              className="!mt-4 !rounded-xl !font-bold"
-                            >
-                              Ver seguimiento
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -936,24 +956,27 @@ function MiCuenta() {
           <div>
             <label className="text-sm font-bold text-gray-800">Comuna</label>
 
-            <Select
+            <Input
               size="large"
               placeholder={
                 nuevaDireccion.region
-                  ? "Selecciona una comuna..."
-                  : "Primero selecciona una región..."
+                  ? "Ej: Ñuñoa, Viña del Mar, Coyhaique..."
+                  : "Primero selecciona una región"
               }
-              value={nuevaDireccion.comuna || undefined}
-              options={obtenerComunasPorRegion(nuevaDireccion.region)}
+              value={nuevaDireccion.comuna}
               disabled={!nuevaDireccion.region}
-              onChange={(value) =>
+              onChange={(e) =>
                 setNuevaDireccion((prev) => ({
                   ...prev,
-                  comuna: value,
+                  comuna: e.target.value,
                 }))
               }
-              className="!mt-2 w-full"
+              className="!mt-2 !rounded-xl"
             />
+
+            <p className="text-xs text-gray-500 mt-1">
+              Escribe la comuna tal como corresponde a tu dirección.
+            </p>
           </div>
 
           <div>

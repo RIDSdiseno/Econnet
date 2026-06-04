@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Carousel } from "antd";
+import { Carousel, message } from "antd";
 import {
   LeftOutlined,
   RightOutlined,
   ShoppingCartOutlined,
 } from "@ant-design/icons";
-import { Link } from "react-router-dom";
-import { obtenerProductos } from "../services/api";
+import { Link, useNavigate } from "react-router-dom";
+import { obtenerProductos, agregarProductoCarrito } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -45,7 +46,7 @@ function adaptarProducto(producto) {
   };
 }
 
-function CardRecomendado({ producto }) {
+function CardRecomendado({ producto, cargandoCarrito, onAgregarCarrito }) {
   return (
     <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden h-full group">
       <Link to={`/producto/${producto.id}`}>
@@ -92,7 +93,13 @@ function CardRecomendado({ producto }) {
             <p className="text-xs text-gray-500">Precio transferencia</p>
           </div>
 
-          <button className="w-10 h-10 rounded-xl bg-emerald-400 text-gray-950 flex items-center justify-center hover:bg-emerald-300 transition shadow-sm border border-emerald-500">
+          <button
+            type="button"
+            disabled={cargandoCarrito}
+            onClick={() => onAgregarCarrito(producto)}
+            className="w-10 h-10 rounded-xl bg-emerald-400 text-gray-950 flex items-center justify-center hover:bg-emerald-300 transition shadow-sm border border-emerald-500 disabled:opacity-50"
+            title="Agregar al carrito"
+          >
             <ShoppingCartOutlined className="text-lg" />
           </button>
         </div>
@@ -103,6 +110,10 @@ function CardRecomendado({ producto }) {
 
 function Recomendados() {
   const carouselRef = useRef(null);
+  const navigate = useNavigate();
+  const { token, estaLogueado } = useAuth();
+
+  const [cargandoCarritoId, setCargandoCarritoId] = useState(null);
 
   const [recomendados, setRecomendados] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -128,6 +139,28 @@ function Recomendados() {
 
     cargarRecomendados();
   }, []);
+
+  const agregarAlCarrito = async (producto) => {
+    if (!estaLogueado || !token) {
+      message.info("Inicia sesión para agregar productos al carrito");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setCargandoCarritoId(producto.id);
+
+      await agregarProductoCarrito(token, producto.id);
+
+      message.success("Producto agregado al carrito");
+
+      window.dispatchEvent(new Event("carritoActualizado"));
+    } catch (error) {
+      message.error(error.message || "No se pudo agregar al carrito");
+    } finally {
+      setCargandoCarritoId(null);
+    }
+  };
 
   const grupos = dividirEnGrupos(recomendados, 4);
 
@@ -183,7 +216,12 @@ function Recomendados() {
             <div key={index}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {grupo.map((producto) => (
-                  <CardRecomendado key={producto.id} producto={producto} />
+                  <CardRecomendado
+                    key={producto.id}
+                    producto={producto}
+                    cargandoCarrito={cargandoCarritoId === producto.id}
+                    onAgregarCarrito={agregarAlCarrito}
+                  />
                 ))}
               </div>
             </div>

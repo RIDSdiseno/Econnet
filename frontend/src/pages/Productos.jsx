@@ -61,6 +61,15 @@ function formatearPrecio(valor) {
   }).format(valor);
 }
 
+function normalizarTexto(texto = "") {
+  return texto
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function SidebarFiltros({
   categorias = [],
   marcas = [],
@@ -297,6 +306,7 @@ function Productos() {
   const { token, estaLogueado } = useAuth();
   const categoriaUrl = searchParams.get("categoria");
   const marcaUrl = searchParams.get("marca");
+  const busquedaUrl = searchParams.get("buscar") || "";
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [marcas, setMarcas] = useState([]);
@@ -399,7 +409,23 @@ function Productos() {
   }, [categoriaUrl, marcaUrl, categorias, marcas]);
   const productosFiltrados = useMemo(() => {
     let resultado = [...productos];
+    const busqueda = normalizarTexto(busquedaUrl);
 
+    if (busqueda) {
+      resultado = resultado.filter((producto) => {
+        const nombre = normalizarTexto(producto.nombre);
+        const descripcion = normalizarTexto(producto.descripcion);
+        const marca = normalizarTexto(producto.marca);
+        const categoria = normalizarTexto(producto.categoria);
+
+        return (
+          nombre.includes(busqueda) ||
+          descripcion.includes(busqueda) ||
+          marca.includes(busqueda) ||
+          categoria.includes(busqueda)
+        );
+      });
+    }
     if (categoriasSeleccionadas.length > 0) {
       resultado = resultado.filter((producto) =>
         categoriasSeleccionadas.includes(producto.categoria),
@@ -444,6 +470,7 @@ function Productos() {
     return resultado;
   }, [
     productos,
+    busquedaUrl,
     categoriasSeleccionadas,
     marcasSeleccionadas,
     preciosSeleccionados,
@@ -462,6 +489,7 @@ function Productos() {
   useEffect(() => {
     setPaginaActual(1);
   }, [
+    busquedaUrl,
     categoriasSeleccionadas,
     marcasSeleccionadas,
     preciosSeleccionados,
@@ -583,10 +611,12 @@ function Productos() {
           <div>
             <h1 className="text-3xl font-black text-gray-900">Productos</h1>
 
-            <p className="text-gray-600 mt-1">
-              {productosFiltrados.length} de {productos.length} productos
-              encontrados
-            </p>
+            {busquedaUrl && (
+              <p className="text-sm text-gray-500 mt-1">
+                Resultados para:{" "}
+                <span className="font-bold text-gray-900">{busquedaUrl}</span>
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

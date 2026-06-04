@@ -66,6 +66,7 @@ model Producto {
   updatedAt    DateTime      @updatedAt
   favoritos    Favorito[]
   carritoItems CarritoItem[]
+  pedidoItems  PedidoItem[]
 
   @@map("productos")
 }
@@ -147,6 +148,7 @@ model Usuario {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   carritoItems CarritoItem[]
+  pedidos      Pedido[]
 
   @@map("usuarios")
 }
@@ -169,6 +171,7 @@ model Direccion {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  pedidos   Pedido[]
 
   @@map("direcciones")
 }
@@ -201,4 +204,91 @@ model CarritoItem {
 
   @@unique([usuarioId, productoId])
   @@map("carrito_items")
+}
+
+model Pedido {
+  id          Int  @id @default(autoincrement())
+  usuarioId   Int
+  direccionId Int?
+
+  numero String @unique
+  estado String @default("pendiente")
+
+  tipoEntrega String @default("despacho")
+  metodoPago  String @default("transferencia")
+  documento   String @default("boleta")
+
+  nombreCliente   String
+  emailCliente    String
+  telefonoCliente String?
+
+  direccionTexto String?
+  region         String?
+  comuna         String?
+
+  subtotal  Int
+  descuento Int @default(0)
+  despacho  Int @default(0)
+  total     Int
+
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  direccion Direccion? @relation(fields: [direccionId], references: [id], onDelete: SetNull)
+
+  items        PedidoItem[]
+  seguimientos PedidoSeguimiento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pedidos")
+}
+
+model PedidoItem {
+  id         Int @id @default(autoincrement())
+  pedidoId   Int
+  productoId Int
+
+  nombreProducto String
+  marcaProducto  String?
+  imagenUrl      String?
+
+  precioUnitario Int
+  cantidad       Int
+  subtotal       Int
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@map("pedido_items")
+}
+
+model TarifaDespacho {
+  id     Int    @id @default(autoincrement())
+  codigo String @unique
+  nombre String
+  precio Int
+
+  activo Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tarifas_despacho")
+}
+
+model PedidoSeguimiento {
+  id       Int @id @default(autoincrement())
+  pedidoId Int
+
+  estado  String
+  titulo  String
+  detalle String?
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("pedido_seguimiento")
 }
