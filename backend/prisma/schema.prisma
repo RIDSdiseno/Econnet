@@ -8,12 +8,16 @@ datasource db {
 }
 
 model Categoria {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   nombre      String
-  slug        String  @unique
+  slug        String   @unique
   descripcion String?
+  activo      Boolean  @default(true)
+
   imagenUrl   String?
-  activo      Boolean @default(true)
+  publicId    String?
+  mostrarHome Boolean @default(true)
+  ordenHome   Int     @default(0)
 
   productos Producto[]
 
@@ -39,7 +43,6 @@ model Marca {
 
   @@map("marcas")
 }
-
 model Producto {
   id Int @id @default(autoincrement())
 
@@ -52,6 +55,18 @@ model Producto {
   modelo      String?
   garantia    String?
   activo      Boolean @default(true)
+  destacado   Boolean @default(false)
+
+  enOferta               Boolean @default(false)
+  precioNormal           Int?
+  descuento              Int     @default(0)
+  etiquetaOferta         String?
+  etiquetaEnvio          String?
+  etiquetaDisponibilidad String?
+
+  mostrarEnOfertas Boolean @default(false)
+  formatoOferta    String  @default("small")
+  ordenOferta      Int     @default(0)
 
   categoriaId Int
   marcaId     Int?

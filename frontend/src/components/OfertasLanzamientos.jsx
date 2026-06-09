@@ -2,170 +2,218 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { obtenerProductos } from "../services/api";
 
-function formatearPrecio(valor) {
-  const numero = Number(valor) || 0;
+const imagenFallback = "/img/productos/default-producto.png";
 
+function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
     style: "currency",
     currency: "CLP",
     maximumFractionDigits: 0,
-  }).format(numero);
+  }).format(valor || 0);
 }
 
 function obtenerImagenCard(producto) {
-  return (
-    producto.imagenes?.find((img) => img.tipo === "principal")?.url ||
-    producto.imagenes?.find(
-      (img) => img.esPrincipal && img.tipo !== "oferta_wide",
-    )?.url ||
-    producto.imagenes?.find((img) => img.tipo === "galeria")?.url ||
-    producto.imagenes?.[0]?.url ||
-    "/img/productos/producto.png"
+  const imagenes = producto?.imagenes || [];
+
+  const principal = imagenes.find(
+    (img) => img.esPrincipal && img.tipo !== "oferta_wide",
   );
+
+  const galeria = imagenes.find((img) => img.tipo === "galeria");
+
+  return principal?.url || galeria?.url || imagenes[0]?.url || imagenFallback;
 }
 
 function obtenerImagenOfertaWide(producto) {
-  return (
-    producto.imagenes?.find((img) => img.tipo === "oferta_wide")?.url ||
-    obtenerImagenCard(producto)
-  );
+  const imagenes = producto?.imagenes || [];
+
+  const ofertaWide = imagenes.find((img) => img.tipo === "oferta_wide");
+
+  return ofertaWide?.url || null;
 }
 
-function adaptarProducto(producto, tipo = "small") {
+function adaptarProducto(producto, tipo) {
   if (!producto) return null;
 
-  const imagenOfertaWide = producto.imagenes?.find(
-    (img) => img.tipo === "oferta_wide",
-  );
+  const imagenOfertaWide = obtenerImagenOfertaWide(producto);
+  const precioActual = Number(producto.precio) || 0;
+  const precioNormal = Number(producto.precioNormal) || null;
 
   return {
     id: producto.id,
     nombre: producto.nombre,
-    descripcion: producto.descripcion || "Producto disponible en Econnet",
-    marca: producto.marca?.nombre || "Sin marca",
-    categoria: producto.categoria?.nombre || "Sin categoría",
-    precio: producto.precio,
-    precioNormal: producto.precioNormal || producto.precio,
-    descuento: producto.descuento || 0,
+    marca: producto.marca?.nombre || producto.marca || "Producto",
+    precio: precioActual,
+    precioNormal,
+    descuento: Number(producto.descuento) || 0,
     imagen:
       tipo === "wide"
-        ? obtenerImagenOfertaWide(producto)
+        ? imagenOfertaWide || obtenerImagenCard(producto)
         : obtenerImagenCard(producto),
+    slug: producto.slug,
+    tipo,
     tieneOfertaWide: Boolean(imagenOfertaWide),
     disponible: producto.stock > 0,
-    tipo,
+
+    enOferta: producto.enOferta || false,
+    etiquetaOferta: producto.etiquetaOferta || "",
+    etiquetaEnvio: producto.etiquetaEnvio || "",
+    etiquetaDisponibilidad: producto.etiquetaDisponibilidad || "",
   };
 }
 
-function OfertaWide({ item }) {
-  if (!item) return null;
+function OfertaSmall({ item }) {
+  const mostrarPrecioNormal =
+    item.enOferta && item.precioNormal && item.precioNormal > item.precio;
 
+  const textoOferta =
+    item.etiquetaOferta ||
+    (item.descuento > 0 ? `${item.descuento}% DCTO.` : "");
+
+  return (
+    <Link
+      to={`/producto/${item.id}`}
+      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden group flex flex-col h-[405px]"
+    >
+      <div className="relative h-52 bg-white flex items-center justify-center p-4 shrink-0">
+        <img
+          src={item.imagen}
+          alt={item.nombre}
+          className="max-h-full max-w-full object-contain group-hover:scale-105 transition"
+          onError={(e) => {
+            e.currentTarget.src = imagenFallback;
+          }}
+        />
+
+        {item.enOferta && textoOferta && (
+          <span className="absolute left-3 top-3 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">
+            {textoOferta}
+          </span>
+        )}
+
+        <div className="absolute right-3 bottom-3 flex flex-col items-end gap-1">
+          {item.etiquetaEnvio && (
+            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">
+              {item.etiquetaEnvio}
+            </span>
+          )}
+
+          {item.etiquetaDisponibilidad ? (
+            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
+              {item.etiquetaDisponibilidad}
+            </span>
+          ) : item.disponible ? (
+            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
+              DISPONIBLE
+            </span>
+          ) : (
+            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded">
+              SIN STOCK
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 flex flex-col flex-1">
+        <p className="text-xs uppercase font-semibold text-gray-700 mb-1">
+          {item.marca}
+        </p>
+
+        <h3
+          className="text-sm text-gray-900 leading-snug min-h-[58px] max-h-[58px]"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {item.nombre}
+        </h3>
+
+        <div className="mt-auto">
+          <div className="min-h-[22px] mb-1">
+            {mostrarPrecioNormal && (
+              <p className="text-sm text-gray-400 line-through">
+                {formatearPrecio(item.precioNormal)}
+              </p>
+            )}
+          </div>
+
+          <p className="text-xl font-bold text-blue-900 mb-3">
+            {formatearPrecio(item.precio)}
+          </p>
+
+          <p className="text-xs text-blue-700">Transferencias</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function OfertaWide({ item }) {
   if (item.tieneOfertaWide) {
     return (
-      <Link to={`/producto/${item.id}`} className="block h-full">
-        <article className="relative w-full h-[400px] bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group">
-          <img
-            src={item.imagen}
-            alt={item.nombre}
-            className="w-full h-full object-cover transition duration-300 group-hover:scale-[1.02]"
-          />
-
-          <div className="absolute inset-0 ring-1 ring-black/5 rounded-xl pointer-events-none"></div>
-        </article>
+      <Link
+        to={`/producto/${item.id}`}
+        className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition block bg-white h-[405px]"
+      >
+        <img
+          src={item.imagen}
+          alt={item.nombre}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.src = imagenFallback;
+          }}
+        />
       </Link>
     );
   }
 
-  return (
-    <Link to={`/producto/${item.id}`} className="block h-full">
-      <article className="relative w-full h-[400px] bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group">
-        <div className="absolute inset-0 flex items-center justify-end p-8 bg-gradient-to-r from-gray-950 via-gray-900 to-gray-800">
-          <img
-            src={item.imagen}
-            alt={item.nombre}
-            className="max-h-full max-w-[55%] object-contain transition duration-300 group-hover:scale-105"
-          />
-        </div>
+  const mostrarPrecioNormal =
+    item.enOferta && item.precioNormal && item.precioNormal > item.precio;
 
-        <div className="relative z-10 h-full flex flex-col justify-end p-6 md:p-8 text-white max-w-xl">
-          <span className="w-fit text-[11px] font-black bg-emerald-400 text-gray-950 px-3 py-1 rounded-full mb-3">
-            OFERTA / LANZAMIENTO
+  return (
+    <Link
+      to={`/producto/${item.id}`}
+      className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition bg-slate-900 text-white h-[405px] flex items-center p-8 relative"
+    >
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-700" />
+
+      <div className="relative z-10 max-w-[45%]">
+        {item.enOferta && item.etiquetaOferta && (
+          <span className="inline-block bg-emerald-400 text-slate-950 text-xs font-bold px-3 py-1 rounded mb-3">
+            {item.etiquetaOferta}
           </span>
+        )}
 
-          <p className="text-sm font-bold uppercase text-emerald-200">
-            {item.marca}
+        <h3 className="text-3xl font-bold leading-tight mb-3">{item.nombre}</h3>
+
+        <p className="text-sm text-slate-300 mb-5">
+          {item.etiquetaEnvio || "Oferta destacada por tiempo limitado"}
+        </p>
+
+        {mostrarPrecioNormal && (
+          <p className="text-lg text-slate-400 line-through">
+            {formatearPrecio(item.precioNormal)}
           </p>
+        )}
 
-          <h3 className="text-2xl md:text-3xl font-black leading-tight mt-2 line-clamp-2">
-            {item.nombre}
-          </h3>
+        <p className="text-3xl font-black text-white">
+          {formatearPrecio(item.precio)}
+        </p>
+      </div>
 
-          <p className="text-sm text-gray-200 mt-2 line-clamp-2">
-            {item.descripcion}
-          </p>
-
-          <p className="text-3xl font-black mt-4">
-            {formatearPrecio(item.precio)}
-          </p>
-
-          <p className="text-xs text-gray-200">Precio transferencia</p>
-        </div>
-      </article>
-    </Link>
-  );
-}
-function OfertaSmall({ item }) {
-  if (!item) return null;
-
-  return (
-    <Link to={`/producto/${item.id}`} className="block h-full">
-      <article className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden h-full">
-        <div className="relative h-52 bg-white flex items-center justify-center p-3 overflow-hidden">
-          <img
-            src={item.imagen}
-            alt={item.nombre}
-            className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
-          />
-
-          <div className="absolute bottom-2 right-2 flex flex-col items-end gap-1">
-            {item.disponible && (
-              <span className="text-[9px] font-bold text-purple-700 bg-purple-100/90 px-2 py-1 rounded">
-                DISPONIBLE
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="p-4 pt-2">
-          <h3 className="text-sm font-bold text-gray-900 uppercase line-clamp-1">
-            {item.marca}
-          </h3>
-
-          <p className="text-xs text-gray-600 mt-1 line-clamp-2 min-h-[34px]">
-            {item.nombre}
-          </p>
-
-          <div className="mt-3 flex items-center gap-2 min-h-[24px]">
-            {item.descuento > 0 && (
-              <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
-                -{item.descuento}% DCTO.
-              </span>
-            )}
-
-            {item.precioNormal > item.precio && (
-              <span className="text-xs text-gray-400 line-through">
-                {formatearPrecio(item.precioNormal)}
-              </span>
-            )}
-          </div>
-
-          <p className="text-xl font-bold text-indigo-900 mt-1">
-            {formatearPrecio(item.precio)}
-          </p>
-
-          <p className="text-xs text-indigo-800">Transferencias</p>
-        </div>
-      </article>
+      <div className="relative z-10 flex-1 flex justify-end">
+        <img
+          src={item.imagen}
+          alt={item.nombre}
+          className="max-h-[320px] max-w-[52%] object-contain"
+          onError={(e) => {
+            e.currentTarget.src = imagenFallback;
+          }}
+        />
+      </div>
     </Link>
   );
 }
@@ -181,24 +229,29 @@ function OfertasLanzamientos() {
 
         const productosApi = await obtenerProductos();
 
-        const productosConOfertaWide = productosApi.filter((producto) =>
-          producto.imagenes?.some((img) => img.tipo === "oferta_wide"),
+        const productosEnOfertas = productosApi
+          .filter((producto) => producto.activo && producto.mostrarEnOfertas)
+          .sort((a, b) => {
+            const ordenA = Number(a.ordenOferta) || 0;
+            const ordenB = Number(b.ordenOferta) || 0;
+
+            if (ordenA !== ordenB) return ordenA - ordenB;
+
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+          });
+
+        const productosWide = productosEnOfertas.filter(
+          (producto) => producto.formatoOferta === "wide",
         );
 
-        const productosNormales = productosApi.filter(
-          (producto) =>
-            !producto.imagenes?.some((img) => img.tipo === "oferta_wide"),
+        const productosSmall = productosEnOfertas.filter(
+          (producto) => producto.formatoOferta !== "wide",
         );
 
-        const wide1 = productosConOfertaWide[0] || productosApi[0];
-        const wide2 = productosConOfertaWide[1] || productosApi[1];
+        const wide1 = productosWide[0];
+        const wide2 = productosWide[1];
 
-        const smalls = productosNormales
-          .filter(
-            (producto) =>
-              producto.id !== wide1?.id && producto.id !== wide2?.id,
-          )
-          .slice(0, 4);
+        const smalls = productosSmall.slice(0, 4);
 
         const productosAdaptados = [
           adaptarProducto(smalls[0], "small"),
@@ -211,7 +264,8 @@ function OfertasLanzamientos() {
 
         setOfertas(productosAdaptados);
       } catch (error) {
-        console.error("Error al cargar ofertas y lanzamientos:", error);
+        console.error("Error al cargar ofertas:", error);
+        setOfertas([]);
       } finally {
         setCargando(false);
       }
@@ -220,61 +274,37 @@ function OfertasLanzamientos() {
     cargarOfertas();
   }, []);
 
-  if (cargando) {
-    return (
-      <section className="bg-gray-100 px-8 py-7">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Ofertas y Lanzamientos
-          </h2>
+  if (cargando) return null;
 
-          <p className="text-gray-600 mt-3">Cargando productos...</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (ofertas.length === 0) {
-    return null;
-  }
-
-  const producto1 = ofertas[0];
-  const producto2 = ofertas[1];
-  const producto3 = ofertas[2];
-  const producto4 = ofertas[3];
-  const producto5 = ofertas[4];
-  const producto6 = ofertas[5];
+  if (ofertas.length === 0) return null;
 
   return (
-    <section className="bg-gray-100 px-8 py-7">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-5">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Ofertas y Lanzamientos
-          </h2>
+    <section className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-6 mb-8">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Ofertas y Lanzamientos
+        </h2>
+        <div className="h-[2px] bg-emerald-400 flex-1 max-w-[160px]" />
+      </div>
 
-          <div className="h-[2px] flex-1 max-w-40 bg-emerald-400"></div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <OfertaSmall item={producto1} />
-            <OfertaSmall item={producto2} />
-          </div>
-
-          <div className="lg:col-span-4">
-            <OfertaWide item={producto3} />
-          </div>
-
-          <div className="lg:col-span-4">
-            <OfertaWide item={producto4} />
-          </div>
-
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <OfertaSmall item={producto5} />
-            <OfertaSmall item={producto6} />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {ofertas.map((item, index) =>
+          item.tipo === "wide" ? (
+            <div
+              key={`${item.id}-${index}`}
+              className="md:col-span-4 lg:col-span-4"
+            >
+              <OfertaWide item={item} />
+            </div>
+          ) : (
+            <div
+              key={`${item.id}-${index}`}
+              className="md:col-span-2 lg:col-span-1"
+            >
+              <OfertaSmall item={item} />
+            </div>
+          ),
+        )}
       </div>
     </section>
   );

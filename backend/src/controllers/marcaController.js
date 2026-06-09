@@ -58,3 +58,35 @@ export const obtenerMarcaPorId = async (req, res) => {
     });
   }
 };
+
+
+export const obtenerMarcasHome = async (req, res) => {
+    try {
+        const marcas = await prisma.marca.findMany({
+            where: {
+                activo: true,
+                mostrarHome: true,
+            },
+            orderBy: [
+                {
+                    orden: "asc",
+                },
+                {
+                    id: "asc",
+                },
+            ],
+        });
+
+        return res.json({
+            ok: true,
+            marcas,
+        });
+    } catch (error) {
+        console.error("Error al obtener marcas del home:", error);
+
+        return res.status(500).json({
+            ok: false,
+            mensaje: "Error al obtener marcas del home",
+        });
+    }
+};

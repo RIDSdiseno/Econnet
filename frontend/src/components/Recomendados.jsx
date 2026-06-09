@@ -55,6 +55,9 @@ function CardRecomendado({ producto, cargandoCarrito, onAgregarCarrito }) {
             src={producto.imagen}
             alt={producto.nombre}
             className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
+            onError={(e) => {
+              e.currentTarget.src = "/img/productos/producto.png";
+            }}
           />
         </div>
       </Link>
@@ -90,7 +93,7 @@ function CardRecomendado({ producto, cargandoCarrito, onAgregarCarrito }) {
               {formatearPrecio(producto.precio)}
             </p>
 
-            <p className="text-xs text-gray-500">Precio transferencia</p>
+          
           </div>
 
           <button
@@ -125,7 +128,16 @@ function Recomendados() {
 
         const productosApi = await obtenerProductos();
 
-        const productosAdaptados = productosApi
+        const productosNoDestacados = productosApi.filter(
+          (producto) => !producto.destacado,
+        );
+
+        const productosBase =
+          productosNoDestacados.length > 0
+            ? productosNoDestacados
+            : productosApi;
+
+        const productosAdaptados = productosBase
           .slice(0, 8)
           .map(adaptarProducto);
 

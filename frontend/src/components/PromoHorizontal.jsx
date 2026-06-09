@@ -47,6 +47,9 @@ function PromoHorizontal() {
               src={promo.imagenUrl}
               alt={promo.titulo || "Anuncio promocional"}
               className="w-full h-[220px] md:h-[320px] lg:h-[400px] object-cover object-center block transition duration-300 group-hover:scale-[1.03]"
+              onError={(e) => {
+                e.currentTarget.src = "/img/banners/banner-placeholder.png";
+              }}
             />
           </div>
         </Link>

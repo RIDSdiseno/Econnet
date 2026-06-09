@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button, Input, Divider, message } from "antd";
 import {
   MailOutlined,
   LockOutlined,
   CustomerServiceOutlined,
   ArrowLeftOutlined,
+  WindowsOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
@@ -15,6 +16,7 @@ function Login() {
   const [cargando, setCargando] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const iniciarSesion = async () => {
@@ -31,13 +33,26 @@ function Login() {
     try {
       setCargando(true);
 
-      await login({
+      const data = await login({
         email: correo,
         password,
       });
 
       message.success("Inicio de sesión correcto");
-      navigate("/mi-cuenta");
+
+      const destino = location.state?.from?.pathname;
+
+      if (destino) {
+        navigate(destino, { replace: true });
+        return;
+      }
+
+      if (data?.usuario?.rol === "admin") {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      navigate("/mi-cuenta", { replace: true });
     } catch (error) {
       message.error(error.message || "No se pudo iniciar sesión");
     } finally {
@@ -45,8 +60,14 @@ function Login() {
     }
   };
 
+  const iniciarConMicrosoft = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    window.location.href = `${apiUrl}/auth/microsoft`;
+  };
+
   const iniciarConGoogle = () => {
-    message.info("Inicio con Google pendiente de conectar al backend");
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    window.location.href = `${apiUrl}/auth/google`;
   };
 
   return (
@@ -185,12 +206,21 @@ function Login() {
                 <Divider className="!my-6">
                   <span className="text-gray-500 text-sm">o continúa con</span>
                 </Divider>
+                <Button
+                  block
+                  size="large"
+                  onClick={iniciarConMicrosoft}
+                  className="!h-14 !rounded-2xl !font-bold !border-gray-300 hover:!border-gray-900"
+                >
+                  <WindowsOutlined className="text-lg mr-2" />
+                  Iniciar sesión con Microsoft
+                </Button>
 
                 <Button
                   block
                   size="large"
                   onClick={iniciarConGoogle}
-                  className="!h-14 !rounded-2xl !font-bold !border-gray-300 hover:!border-gray-900"
+                  className="!h-14 !mt-3 !rounded-2xl !font-bold !border-gray-300 hover:!border-gray-900"
                 >
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white border border-gray-300 text-sm font-black mr-2">
                     G

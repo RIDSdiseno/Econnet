@@ -12,7 +12,7 @@ function BannerCarousel() {
       try {
         setCargando(true);
 
-        const anuncios = await obtenerAnuncios("banner_carousel");
+        const anuncios = await obtenerAnuncios("banner_home");
 
         setBanners(anuncios);
       } catch (error) {

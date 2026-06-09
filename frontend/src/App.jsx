@@ -17,6 +17,19 @@ import CompraExitosa from "./pages/CompraExitosa";
 import SeguimientoCompra from "./pages/SeguimientoCompra";
 import TerminosCondiciones from "./pages/TerminosCondiciones";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad";
+import RutaAdmin from "./routes/RutaAdmin";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminPedidos from "./pages/admin/AdminPedidos";
+import AdminDetallePedido from "./pages/admin/AdminDetallePedido";
+import AdminTarifas from "./pages/admin/AdminTarifas";
+import AdminCategorias from "./pages/admin/AdminCategorias";
+import AdminMarcas from "./pages/admin/AdminMarcas"
+import AdminProductos from "./pages/admin/AdminProductos";
+import AdminAnuncios from "./pages/admin/AdminAnuncios";
+import AdminUsuarios from "./pages/admin/AdminUsuarios";
+import AuthCallback from "./pages/AuthCallback";
+
 
 function App() {
   return (
@@ -37,9 +50,37 @@ function App() {
           <Route path="/centro-ayuda" element={<CentroAyuda />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/seguimiento-compra" element={<SeguimientoCompra />} />
-          <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
-          <Route path="/politicas-privacidad" element={<PoliticasPrivacidad />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+
+          <Route
+            path="/terminos-condiciones"
+            element={<TerminosCondiciones />}
+          />
+          <Route
+            path="/politicas-privacidad"
+            element={<PoliticasPrivacidad />}
+          />
           <Route path="/compra-exitosa" element={<CompraExitosa />} />
+
+          <Route
+            path="/admin"
+            element={
+              <RutaAdmin>
+                <AdminLayout />
+              </RutaAdmin>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="pedidos" element={<AdminPedidos />} />
+            <Route path="pedidos/:id" element={<AdminDetallePedido />} />
+            <Route path="tarifas" element={<AdminTarifas />} />
+            <Route path="categorias" element={<AdminCategorias />} />
+            <Route path="marcas" element={<AdminMarcas />} />
+            <Route path="productos" element={<AdminProductos />} />
+            <Route path="anuncios" element={<AdminAnuncios />} />
+            <Route path="usuarios" element={<AdminUsuarios />} />
+
+          </Route>
         </Routes>
       </AuthProvider>
     </BrowserRouter>

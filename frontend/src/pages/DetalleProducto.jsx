@@ -84,10 +84,7 @@ function ProductosRelacionadosCarrusel({
                   <Link to={`/producto/${producto.id}`}>
                     <div className="h-40 bg-white flex items-center justify-center p-4">
                       <img
-                        src={
-                          producto.imagenes?.[0]?.url ||
-                          "/img/productos/producto.png"
-                        }
+                        src={obtenerImagenPrincipalProducto(producto)}
                         alt={producto.nombre}
                         className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
                       />
@@ -142,6 +139,27 @@ function formatearPrecio(valor) {
     maximumFractionDigits: 0,
   }).format(valor);
 }
+
+function obtenerImagenPrincipalProducto(producto) {
+  const imagenes =
+    producto.imagenes
+      ?.filter((img) => img.tipo !== "oferta_wide" && img.tipo !== "banner")
+      ?.filter((img) => img.url && img.url.trim() !== "")
+      ?.sort((a, b) => {
+        if (a.esPrincipal !== b.esPrincipal) {
+          return a.esPrincipal ? -1 : 1;
+        }
+
+        return (a.orden || 0) - (b.orden || 0);
+      }) || [];
+
+  return (
+    imagenes.find((img) => img.esPrincipal)?.url ||
+    imagenes[0]?.url ||
+    "/img/productos/producto.png"
+  );
+}
+
 function ValoracionesProducto({ producto }) {
   const [valoracion, setValoracion] = useState(0);
   const [comentario, setComentario] = useState("");
@@ -225,7 +243,13 @@ function DetalleProducto() {
               (img) => img.tipo !== "oferta_wide" && img.tipo !== "banner",
             )
             ?.filter((img) => img.url && img.url.trim() !== "")
-            ?.sort((a, b) => a.orden - b.orden) || [];
+            ?.sort((a, b) => {
+              if (a.esPrincipal !== b.esPrincipal) {
+                return a.esPrincipal ? -1 : 1;
+              }
+
+              return (a.orden || 0) - (b.orden || 0);
+            }) || [];
 
         const imagenInicial =
           imagenesValidas.find((img) => img.esPrincipal) || imagenesValidas[0];
@@ -396,7 +420,13 @@ function DetalleProducto() {
     producto.imagenes
       ?.filter((img) => img.tipo !== "oferta_wide" && img.tipo !== "banner")
       ?.filter((img) => img.url && img.url.trim() !== "")
-      ?.sort((a, b) => a.orden - b.orden) || [];
+      ?.sort((a, b) => {
+        if (a.esPrincipal !== b.esPrincipal) {
+          return a.esPrincipal ? -1 : 1;
+        }
+
+        return (a.orden || 0) - (b.orden || 0);
+      }) || [];
 
   const imagenesDetalleBase =
     imagenesProducto.length > 0 ? [...imagenesProducto] : [];

@@ -43,15 +43,18 @@ export const obtenerMarcas = async () => {
   const data = await respuesta.json();
   return data.marcas;
 };
-export const obtenerAnuncios = async (ubicacion) => {
-  const respuesta = await fetch(`${API_URL}/anuncios?ubicacion=${ubicacion}`);
+export const obtenerAnuncios = async (ubicacion = "") => {
+  const query = ubicacion ? `?ubicacion=${encodeURIComponent(ubicacion)}` : "";
 
-  if (!respuesta.ok) {
-    throw new Error("Error al obtener anuncios");
+  const res = await fetch(`${API_URL}/anuncios${query}`);
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.mensaje || "Error al obtener anuncios");
   }
 
-  const data = await respuesta.json();
-  return data.anuncios;
+  return data.anuncios || [];
 };
 
 export const registrarUsuario = async (datos) => {
@@ -429,3 +432,29 @@ export const calcularDespacho = async (token, tipoEntrega, direccionId) => {
 
   return data.despacho;
 };
+
+export const obtenerMarcasHome = async () => {
+  const res = await fetch(`${API_URL}/marcas/home`);
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.mensaje || "Error al obtener marcas del home");
+  }
+
+  return data;
+};
+
+
+export const obtenerProductosDestacados = async () => {
+  const res = await fetch(`${API_URL}/productos/destacados`);
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.mensaje || "Error al obtener productos destacados");
+  }
+
+  return data.productos || [];
+};
+

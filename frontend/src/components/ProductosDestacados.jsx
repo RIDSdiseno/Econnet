@@ -7,10 +7,12 @@ import {
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  obtenerProductos,
+  obtenerProductosDestacados,
   agregarProductoCarrito,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+
+const imagenFallback = "/img/productos/producto.png";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -32,40 +34,89 @@ function formatearPrecio(valor) {
   }).format(numero);
 }
 
+function obtenerImagenPrincipal(producto) {
+  const imagenes = producto?.imagenes || [];
+
+  const principal = imagenes.find(
+    (img) => img.esPrincipal && img.tipo !== "oferta_wide",
+  );
+
+  const galeria = imagenes.find((img) => img.tipo === "galeria");
+
+  return principal?.url || galeria?.url || imagenes[0]?.url || imagenFallback;
+}
+
 function adaptarProducto(producto) {
-  const imagenPrincipal =
-    producto.imagenes?.find((img) => img.esPrincipal)?.url ||
-    producto.imagenes?.[0]?.url ||
-    "/img/productos/producto.png";
+  const precio = Number(producto.precio) || 0;
+  const precioNormal = Number(producto.precioNormal) || precio;
 
   return {
     id: producto.id,
     marca: producto.marca?.nombre || "Sin marca",
     nombre: producto.nombre,
-    precio: producto.precio,
-    precioNormal: producto.precioNormal || producto.precio,
-    descuento: producto.descuento || 0,
-    imagen: imagenPrincipal,
+    precio,
+    precioNormal,
+    descuento: Number(producto.descuento) || 0,
+    imagen: obtenerImagenPrincipal(producto),
+
+    enOferta: producto.enOferta || false,
+    etiquetaOferta: producto.etiquetaOferta || "",
+    etiquetaEnvio: producto.etiquetaEnvio || "",
+    etiquetaDisponibilidad: producto.etiquetaDisponibilidad || "",
+    disponible: producto.stock > 0,
   };
 }
 
-function ProductoCard({
-  producto,
-  cargandoCarrito,
-  onAgregarCarrito,
-}) {
+function ProductoCard({ producto, cargandoCarrito, onAgregarCarrito }) {
+  const mostrarPrecioNormal =
+    producto.enOferta &&
+    producto.precioNormal &&
+    producto.precioNormal > producto.precio;
+
+  const textoOferta =
+    producto.etiquetaOferta ||
+    (producto.descuento > 0 ? `${producto.descuento}% DCTO.` : "");
+
   return (
     <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden h-full group">
       <Link to={`/producto/${producto.id}`}>
-        <div className="h-44 bg-white flex items-center justify-center p-4">
+        <div className="relative h-44 bg-white flex items-center justify-center p-4">
           <img
             src={producto.imagen}
             alt={producto.nombre}
             className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
             onError={(e) => {
-              e.currentTarget.src = "/img/productos/producto.png";
+              e.currentTarget.src = imagenFallback;
             }}
           />
+
+          {producto.enOferta && textoOferta && (
+            <span className="absolute left-3 top-3 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">
+              {textoOferta}
+            </span>
+          )}
+
+          <div className="absolute right-3 bottom-3 flex flex-col items-end gap-1">
+            {producto.etiquetaEnvio && (
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">
+                {producto.etiquetaEnvio}
+              </span>
+            )}
+
+            {producto.etiquetaDisponibilidad ? (
+              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
+                {producto.etiquetaDisponibilidad}
+              </span>
+            ) : producto.disponible ? (
+              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
+                DISPONIBLE
+              </span>
+            ) : (
+              <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded">
+                SIN STOCK
+              </span>
+            )}
+          </div>
         </div>
       </Link>
 
@@ -80,14 +131,8 @@ function ProductoCard({
           </p>
         </Link>
 
-        <div className="mt-3 flex items-center gap-2 min-h-[24px]">
-          {producto.descuento > 0 && (
-            <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
-              {producto.descuento}% DCTO.
-            </span>
-          )}
-
-          {producto.precioNormal > producto.precio && (
+        <div className="mt-3 min-h-[24px]">
+          {mostrarPrecioNormal && (
             <span className="text-xs text-gray-400 line-through">
               {formatearPrecio(producto.precioNormal)}
             </span>
@@ -100,7 +145,7 @@ function ProductoCard({
               {formatearPrecio(producto.precio)}
             </p>
 
-            <p className="text-xs text-gray-500">Precio transferencia</p>
+            
           </div>
 
           <button
@@ -132,15 +177,18 @@ function ProductosDestacados() {
       try {
         setCargando(true);
 
-        const productosApi = await obtenerProductos();
+        const respuesta = await obtenerProductosDestacados();
 
-        const productosAdaptados = productosApi
-          .slice(0, 8)
-          .map(adaptarProducto);
+        const productosApi = Array.isArray(respuesta)
+          ? respuesta
+          : respuesta.productos || [];
+
+        const productosAdaptados = productosApi.map(adaptarProducto);
 
         setProductosDestacados(productosAdaptados);
       } catch (error) {
         console.error("Error al cargar productos destacados:", error);
+        setProductosDestacados([]);
       } finally {
         setCargando(false);
       }
@@ -200,26 +248,28 @@ function ProductosDestacados() {
               Productos destacados
             </h2>
 
-            <div className="h-[2px] flex-1 min-w-20 max-w-40 bg-gray-900"></div>
+            <div className="h-[2px] flex-1 min-w-20 max-w-40 bg-gray-900" />
           </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => carouselRef.current?.prev()}
-              className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-900 hover:text-white transition"
-            >
-              <LeftOutlined />
-            </button>
+          {grupos.length > 1 && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => carouselRef.current?.prev()}
+                className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-900 hover:text-white transition"
+              >
+                <LeftOutlined />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => carouselRef.current?.next()}
-              className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-900 hover:text-white transition"
-            >
-              <RightOutlined />
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => carouselRef.current?.next()}
+                className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-900 hover:text-white transition"
+              >
+                <RightOutlined />
+              </button>
+            </div>
+          )}
         </div>
 
         <Carousel ref={carouselRef} dots={false} autoplay autoplaySpeed={5000}>

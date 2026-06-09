@@ -42,11 +42,11 @@ function Marcas() {
 
         const marcasApi = await obtenerMarcas();
 
-        const principales = marcasApi
-          .filter((marca) => marca.grupo === "principal")
-          .sort((a, b) => a.orden - b.orden);
+        const marcasHome = marcasApi
+          .filter((marca) => marca.activo && marca.mostrarHome)
+          .sort((a, b) => (a.orden || 0) - (b.orden || 0));
 
-        setMarcasPrincipales(principales);
+        setMarcasPrincipales(marcasHome);
       } catch (error) {
         console.error("Error al cargar marcas:", error);
       } finally {
