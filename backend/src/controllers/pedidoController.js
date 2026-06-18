@@ -7,7 +7,6 @@ import {
 
 
 const METODOS_PAGO_VALIDOS = [
-  "transferencia",
   "webpay",
   "oneclick",
   "mercadopago",
@@ -37,13 +36,83 @@ const obtenerImagenPrincipal = (producto) => {
   return imagenPrincipal?.url || null;
 };
 
+const limpiarTexto = (valor) => {
+  return typeof valor === "string" ? valor.trim() : "";
+};
+
+const emailValido = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const normalizarItemsInvitado = (items = []) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("El carrito está vacío");
+  }
+
+  const mapaItems = new Map();
+
+  for (const item of items) {
+    const productoId = Number(item.productoId || item.id);
+    const cantidad = Number(item.cantidad);
+
+    if (!Number.isInteger(productoId) || productoId <= 0) {
+      throw new Error("Uno de los productos del carrito no es válido");
+    }
+
+    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+      throw new Error("La cantidad de un producto no es válida");
+    }
+
+    mapaItems.set(
+      productoId,
+      (mapaItems.get(productoId) || 0) + cantidad,
+    );
+  }
+
+  return Array.from(mapaItems.entries()).map(
+    ([productoId, cantidad]) => ({
+      productoId,
+      cantidad,
+    }),
+  );
+};
+
+const construirItemsInvitado = (itemsNormalizados, productos) => {
+  const productosPorId = new Map(
+    productos.map((producto) => [producto.id, producto]),
+  );
+
+  return itemsNormalizados.map((item) => {
+    const producto = productosPorId.get(item.productoId);
+
+    if (!producto) {
+      throw new Error("Uno de los productos ya no está disponible");
+    }
+
+    return {
+      productoId: item.productoId,
+      cantidad: item.cantidad,
+      producto,
+    };
+  });
+};
+
 export const crearPedido = async (req, res) => {
   try {
     const {
       direccionId,
       tipoEntrega = "despacho",
-      metodoPago = "transferencia",
+      metodoPago = "webpay",
       documento = "boleta",
+
+      nombreCliente,
+      emailCliente,
+      telefonoCliente,
+      direccionTexto,
+      region,
+      comuna,
+
+      items = [],
 
       rutFacturacion,
       razonSocialFacturacion,
@@ -53,6 +122,9 @@ export const crearPedido = async (req, res) => {
       ciudadFacturacion,
     } = req.body;
 
+    const usuarioAutenticado = req.usuario || null;
+    const esInvitado = !usuarioAutenticado;
+
     if (!METODOS_PAGO_VALIDOS.includes(metodoPago)) {
       return res.status(400).json({
         ok: false,
@@ -60,9 +132,16 @@ export const crearPedido = async (req, res) => {
       });
     }
 
+    if (esInvitado && metodoPago === "oneclick") {
+      return res.status(400).json({
+        ok: false,
+        mensaje:
+          "Oneclick solo está disponible para usuarios registrados",
+      });
+    }
+
     const requiereConfirmacionPago =
       METODOS_PAGO_ONLINE.includes(metodoPago);
-
 
     if (!["boleta", "factura"].includes(documento)) {
       return res.status(400).json({
@@ -71,21 +150,64 @@ export const crearPedido = async (req, res) => {
       });
     }
 
-    if (tipoEntrega === "despacho" && !direccionId) {
+    if (!["despacho", "retiro"].includes(tipoEntrega)) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Tipo de entrega inválido",
+      });
+    }
+
+    if (
+      !esInvitado &&
+      tipoEntrega === "despacho" &&
+      !direccionId
+    ) {
       return res.status(400).json({
         ok: false,
         mensaje: "Debes seleccionar una dirección de despacho",
       });
     }
 
+    if (esInvitado) {
+      const nombreInvitado = limpiarTexto(nombreCliente);
+      const emailInvitado = limpiarTexto(emailCliente).toLowerCase();
+
+      if (!nombreInvitado) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Debes ingresar tu nombre",
+        });
+      }
+
+      if (!emailInvitado || !emailValido(emailInvitado)) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Debes ingresar un correo válido",
+        });
+      }
+
+      if (tipoEntrega === "despacho") {
+        const direccionInvitado = limpiarTexto(direccionTexto);
+        const comunaInvitado = limpiarTexto(comuna);
+
+        if (!direccionInvitado || !comunaInvitado) {
+          return res.status(400).json({
+            ok: false,
+            mensaje:
+              "Debes ingresar dirección y comuna para el despacho",
+          });
+        }
+      }
+    }
+
     if (documento === "factura") {
       const datosFacturaCompletos =
-        rutFacturacion?.trim() &&
-        razonSocialFacturacion?.trim() &&
-        giroFacturacion?.trim() &&
-        direccionFacturacion?.trim() &&
-        comunaFacturacion?.trim() &&
-        ciudadFacturacion?.trim();
+        limpiarTexto(rutFacturacion) &&
+        limpiarTexto(razonSocialFacturacion) &&
+        limpiarTexto(giroFacturacion) &&
+        limpiarTexto(direccionFacturacion) &&
+        limpiarTexto(comunaFacturacion) &&
+        limpiarTexto(ciudadFacturacion);
 
       if (!datosFacturaCompletos) {
         return res.status(400).json({
@@ -96,64 +218,104 @@ export const crearPedido = async (req, res) => {
     }
 
     const pedido = await prisma.$transaction(async (tx) => {
-      const usuario = await tx.usuario.findUnique({
-        where: {
-          id: req.usuario.id,
-        },
-        select: {
-          id: true,
-          nombre: true,
-          email: true,
-          telefono: true,
-          descuentoBienvenidaDisponible: true,
-          descuentoBienvenidaUsado: true,
-        },
-      });
-
-      if (!usuario) {
-        throw new Error("Usuario no encontrado");
-      }
-
+      let usuario = null;
       let direccionSeleccionada = null;
+      let itemsPedido = [];
 
-      if (tipoEntrega === "despacho") {
-        direccionSeleccionada = await tx.direccion.findFirst({
+      if (!esInvitado) {
+        usuario = await tx.usuario.findUnique({
           where: {
-            id: Number(direccionId),
-            usuarioId: req.usuario.id,
+            id: usuarioAutenticado.id,
+          },
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            descuentoBienvenidaDisponible: true,
+            descuentoBienvenidaUsado: true,
           },
         });
 
-        if (!direccionSeleccionada) {
-          throw new Error("Dirección no encontrada");
+        if (!usuario) {
+          throw new Error("Usuario no encontrado");
         }
-      }
 
-      const itemsCarrito = await tx.carritoItem.findMany({
-        where: {
-          usuarioId: req.usuario.id,
-        },
-        include: {
-          producto: {
-            include: {
-              marca: true,
-              imagenes: {
-                orderBy: {
-                  orden: "asc",
+        if (tipoEntrega === "despacho") {
+          direccionSeleccionada = await tx.direccion.findFirst({
+            where: {
+              id: Number(direccionId),
+              usuarioId: usuario.id,
+            },
+          });
+
+          if (!direccionSeleccionada) {
+            throw new Error("Dirección no encontrada");
+          }
+        }
+
+        itemsPedido = await tx.carritoItem.findMany({
+          where: {
+            usuarioId: usuario.id,
+          },
+          include: {
+            producto: {
+              include: {
+                marca: true,
+                imagenes: {
+                  orderBy: {
+                    orden: "asc",
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
+      }
 
-      if (itemsCarrito.length === 0) {
+      if (esInvitado) {
+        const itemsNormalizados = normalizarItemsInvitado(items);
+
+        const productos = await tx.producto.findMany({
+          where: {
+            id: {
+              in: itemsNormalizados.map((item) => item.productoId),
+            },
+            activo: true,
+          },
+          include: {
+            marca: true,
+            imagenes: {
+              orderBy: {
+                orden: "asc",
+              },
+            },
+          },
+        });
+
+        itemsPedido = construirItemsInvitado(
+          itemsNormalizados,
+          productos,
+        );
+
+        if (tipoEntrega === "despacho") {
+          direccionSeleccionada = {
+            direccion: limpiarTexto(direccionTexto),
+            comuna: limpiarTexto(comuna),
+            region: limpiarTexto(region) || null,
+          };
+        }
+      }
+
+      if (itemsPedido.length === 0) {
         throw new Error("El carrito está vacío");
       }
 
-      for (const item of itemsCarrito) {
+      for (const item of itemsPedido) {
         if (!item.producto.activo) {
-          throw new Error(`El producto ${item.producto.nombre} no está disponible`);
+          throw new Error(
+            `El producto ${item.producto.nombre} no está disponible`,
+          );
         }
 
         if (item.cantidad > item.producto.stock) {
@@ -163,11 +325,12 @@ export const crearPedido = async (req, res) => {
         }
       }
 
-      const subtotal = itemsCarrito.reduce((total, item) => {
+      const subtotal = itemsPedido.reduce((total, item) => {
         return total + item.producto.precio * item.cantidad;
       }, 0);
 
       const aplicaDescuentoBienvenida =
+        !esInvitado &&
         usuario.descuentoBienvenidaDisponible === true &&
         usuario.descuentoBienvenidaUsado === false;
 
@@ -181,26 +344,27 @@ export const crearPedido = async (req, res) => {
         direccionSeleccionada,
       );
 
-
       const despacho = tarifaDespacho.precio;
       const total = subtotal - descuento + despacho;
 
       const neto = Math.round(total / 1.19);
       const iva = total - neto;
 
-      const minutosVencimiento =
-        metodoPago === "transferencia" ? 1440 : 30;
+      const minutosVencimiento = 30;
 
       const fechaVencimientoPago = new Date(
         Date.now() + minutosVencimiento * 60 * 1000,
       );
 
       const estadoInicial = obtenerInfoEstadoPedido("pendiente");
+
       const nuevoPedido = await tx.pedido.create({
         data: {
-          usuarioId: req.usuario.id,
+          usuarioId: esInvitado ? null : usuario.id,
           direccionId:
-            tipoEntrega === "despacho" ? Number(direccionId) : null,
+            !esInvitado && tipoEntrega === "despacho"
+              ? Number(direccionId)
+              : null,
 
           numero: generarNumeroPedido(),
           estado: "pendiente",
@@ -214,26 +378,46 @@ export const crearPedido = async (req, res) => {
           documento,
 
           rutFacturacion:
-            documento === "factura" ? rutFacturacion.trim() : null,
+            documento === "factura"
+              ? limpiarTexto(rutFacturacion)
+              : null,
 
           razonSocialFacturacion:
-            documento === "factura" ? razonSocialFacturacion.trim() : null,
+            documento === "factura"
+              ? limpiarTexto(razonSocialFacturacion)
+              : null,
 
           giroFacturacion:
-            documento === "factura" ? giroFacturacion.trim() : null,
+            documento === "factura"
+              ? limpiarTexto(giroFacturacion)
+              : null,
 
           direccionFacturacion:
-            documento === "factura" ? direccionFacturacion.trim() : null,
+            documento === "factura"
+              ? limpiarTexto(direccionFacturacion)
+              : null,
 
           comunaFacturacion:
-            documento === "factura" ? comunaFacturacion.trim() : null,
+            documento === "factura"
+              ? limpiarTexto(comunaFacturacion)
+              : null,
 
           ciudadFacturacion:
-            documento === "factura" ? ciudadFacturacion.trim() : null,
+            documento === "factura"
+              ? limpiarTexto(ciudadFacturacion)
+              : null,
 
-          nombreCliente: usuario.nombre,
-          emailCliente: usuario.email,
-          telefonoCliente: usuario.telefono,
+          nombreCliente: esInvitado
+            ? limpiarTexto(nombreCliente)
+            : usuario.nombre,
+
+          emailCliente: esInvitado
+            ? limpiarTexto(emailCliente).toLowerCase()
+            : usuario.email,
+
+          telefonoCliente: esInvitado
+            ? limpiarTexto(telefonoCliente) || null
+            : usuario.telefono,
 
           direccionTexto: direccionSeleccionada?.direccion || null,
           region: direccionSeleccionada?.region || null,
@@ -245,8 +429,9 @@ export const crearPedido = async (req, res) => {
           neto,
           iva,
           total,
+
           items: {
-            create: itemsCarrito.map((item) => ({
+            create: itemsPedido.map((item) => ({
               productoId: item.productoId,
               nombreProducto: item.producto.nombre,
               marcaProducto: item.producto.marca?.nombre || null,
@@ -266,7 +451,6 @@ export const crearPedido = async (req, res) => {
               },
             ],
           },
-
         },
         include: {
           items: true,
@@ -275,14 +459,17 @@ export const crearPedido = async (req, res) => {
             orderBy: {
               createdAt: "asc",
             },
-          }
+          },
         },
       });
 
-      for (const item of itemsCarrito) {
-        await tx.producto.update({
+      for (const item of itemsPedido) {
+        const stockActualizado = await tx.producto.updateMany({
           where: {
             id: item.productoId,
+            stock: {
+              gte: item.cantidad,
+            },
           },
           data: {
             stock: {
@@ -290,12 +477,22 @@ export const crearPedido = async (req, res) => {
             },
           },
         });
+
+        if (stockActualizado.count !== 1) {
+          throw new Error(
+            `No hay stock suficiente para ${item.producto.nombre}`,
+          );
+        }
       }
 
-      if (descuento > 0 && !requiereConfirmacionPago) {
+      if (
+        !esInvitado &&
+        descuento > 0 &&
+        !requiereConfirmacionPago
+      ) {
         await tx.usuario.update({
           where: {
-            id: req.usuario.id,
+            id: usuario.id,
           },
           data: {
             descuentoBienvenidaDisponible: false,
@@ -314,13 +511,16 @@ export const crearPedido = async (req, res) => {
       }
 
       /*
-  * Los métodos de pago online mantienen el carrito
-  * hasta que el proveedor confirme el pago.
-  */
-      if (!requiereConfirmacionPago) {
+       * Los métodos de pago online mantienen el carrito del usuario
+       * hasta que el proveedor confirme el pago.
+       */
+      if (
+        !esInvitado &&
+        !requiereConfirmacionPago
+      ) {
         await tx.carritoItem.deleteMany({
           where: {
-            usuarioId: req.usuario.id,
+            usuarioId: usuario.id,
           },
         });
       }

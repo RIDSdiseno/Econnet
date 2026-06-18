@@ -17,13 +17,19 @@ import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import {
   obtenerCarrito,
+  obtenerProductoPorId,
   obtenerDirecciones,
   crearPedido,
   calcularDespacho,
   crearPagoWebpay,
+  crearPagoMercadoPago,
   obtenerMediosPago,
   crearPagoOneclick,
 } from "../services/api";
+import {
+  obtenerCarritoInvitado,
+  vaciarCarritoInvitado,
+} from "../utils/carritoInvitado";
 
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
@@ -54,6 +60,26 @@ function adaptarItemCheckout(item) {
   };
 }
 
+function adaptarProductoInvitadoCheckout(producto, cantidad) {
+  const imagenPrincipal =
+    producto.imagenes?.find((imagen) => imagen.esPrincipal)?.url ||
+    producto.imagenes?.find((imagen) => imagen.tipo !== "oferta_wide")?.url ||
+    producto.imagenes?.[0]?.url ||
+    "/img/productos/producto.png";
+
+  return {
+    id: producto.id,
+    nombre: producto.nombre,
+    marca: producto.marca?.nombre || "Sin marca",
+    imagen: imagenPrincipal,
+    precio: producto.precio,
+    precioNormal: producto.precioNormal || producto.precio,
+    descuento: producto.enOferta ? producto.descuento || 0 : 0,
+    cantidad,
+    stockNumero: producto.stock,
+  };
+}
+
 function Checkout() {
   const navigate = useNavigate();
   const { usuario, token, estaLogueado, cargandoAuth } = useAuth();
@@ -79,8 +105,17 @@ function Checkout() {
   const [datos, setDatos] = useState({
     direccionId: "",
     tipoEntrega: "despacho",
-    metodoPago: "transferencia",
+    metodoPago: "mercadopago",
     documento: "boleta",
+  });
+
+  const [datosInvitado, setDatosInvitado] = useState({
+    nombreCliente: "",
+    emailCliente: "",
+    telefonoCliente: "",
+    direccionTexto: "",
+    region: "",
+    comuna: "",
   });
 
   const [datosFacturacion, setDatosFacturacion] = useState({
@@ -100,6 +135,7 @@ function Checkout() {
   };
 
   const tieneDescuentoBienvenida =
+    estaLogueado &&
     usuario?.descuentoBienvenidaDisponible === true &&
     usuario?.descuentoBienvenidaUsado === false;
 
@@ -110,39 +146,63 @@ function Checkout() {
     }));
   };
 
+  const actualizarDatoInvitado = (campo, valor) => {
+    setDatosInvitado((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  };
+
   useEffect(() => {
     const cargarCheckout = async () => {
       if (cargandoAuth) return;
 
-      if (!estaLogueado || !token) {
-        message.info("Inicia sesión para finalizar tu compra");
-        navigate("/login");
-        return;
-      }
-
       try {
         setCargandoCheckout(true);
 
-        const [carritoData, direccionesData] = await Promise.all([
-          obtenerCarrito(token),
-          obtenerDirecciones(token),
-        ]);
+        if (estaLogueado && token) {
+          const [carritoData, direccionesData] = await Promise.all([
+            obtenerCarrito(token),
+            obtenerDirecciones(token),
+          ]);
 
-        const productosAdaptados = carritoData.items.map(adaptarItemCheckout);
+          const productosAdaptados = carritoData.items.map(adaptarItemCheckout);
 
-        setProductosCheckout(productosAdaptados);
-        setDirecciones(direccionesData);
+          setProductosCheckout(productosAdaptados);
+          setDirecciones(direccionesData);
 
-        const direccionPrincipal =
-          direccionesData.find((direccion) => direccion.principal) ||
-          direccionesData[0];
+          const direccionPrincipal =
+            direccionesData.find((direccion) => direccion.principal) ||
+            direccionesData[0];
 
-        if (direccionPrincipal) {
-          setDatos((prev) => ({
-            ...prev,
-            direccionId: direccionPrincipal.id,
-          }));
+          if (direccionPrincipal) {
+            setDatos((prev) => ({
+              ...prev,
+              direccionId: direccionPrincipal.id,
+            }));
+          }
+
+          return;
         }
+
+        const carritoInvitado = obtenerCarritoInvitado();
+
+        if (carritoInvitado.length === 0) {
+          setProductosCheckout([]);
+          return;
+        }
+
+        const productosAdaptados = await Promise.all(
+          carritoInvitado.map(async (item) => {
+            const producto = await obtenerProductoPorId(item.productoId);
+
+            return adaptarProductoInvitadoCheckout(producto, item.cantidad);
+          }),
+        );
+
+        setProductosCheckout(
+          productosAdaptados.filter((producto) => producto.stockNumero > 0),
+        );
       } catch (error) {
         message.error(error.message || "No se pudo cargar el checkout");
       } finally {
@@ -151,11 +211,29 @@ function Checkout() {
     };
 
     cargarCheckout();
-  }, [token, estaLogueado, cargandoAuth, navigate]);
+  }, [token, estaLogueado, cargandoAuth]);
 
   useEffect(() => {
     const cargarDespacho = async () => {
-      if (!token || cargandoAuth || cargandoCheckout) return;
+      if (cargandoAuth || cargandoCheckout) return;
+
+      if (datos.tipoEntrega === "retiro") {
+        setDespachoCalculado({
+          codigo: "RETIRO",
+          nombre: "Retiro en tienda",
+          precio: 0,
+        });
+        return;
+      }
+
+      if (!estaLogueado || !token) {
+        setDespachoCalculado({
+          codigo: "INVITADO",
+          nombre: "Despacho a domicilio",
+          precio: 0,
+        });
+        return;
+      }
 
       if (datos.tipoEntrega === "despacho" && !datos.direccionId) {
         setDespachoCalculado({
@@ -186,6 +264,7 @@ function Checkout() {
     cargarDespacho();
   }, [
     token,
+    estaLogueado,
     datos.tipoEntrega,
     datos.direccionId,
     cargandoAuth,
@@ -275,9 +354,33 @@ function Checkout() {
       return;
     }
 
-    if (datos.tipoEntrega === "despacho" && !datos.direccionId) {
+    if (
+      estaLogueado &&
+      datos.tipoEntrega === "despacho" &&
+      !datos.direccionId
+    ) {
       message.warning("Selecciona una dirección de despacho");
       return;
+    }
+
+    if (!estaLogueado) {
+      if (!datosInvitado.nombreCliente.trim()) {
+        message.warning("Ingresa tu nombre completo");
+        return;
+      }
+
+      if (!datosInvitado.emailCliente.trim()) {
+        message.warning("Ingresa tu correo electrónico");
+        return;
+      }
+
+      if (
+        datos.tipoEntrega === "despacho" &&
+        (!datosInvitado.direccionTexto.trim() || !datosInvitado.comuna.trim())
+      ) {
+        message.warning("Ingresa dirección y comuna de despacho");
+        return;
+      }
     }
 
     if (datos.documento === "factura") {
@@ -303,13 +406,39 @@ function Checkout() {
     try {
       setProcesandoCompra(true);
 
-      const pedido = await crearPedido(token, {
+      const payloadPedido = {
         direccionId:
-          datos.tipoEntrega === "despacho" ? Number(datos.direccionId) : null,
+          estaLogueado && datos.tipoEntrega === "despacho"
+            ? Number(datos.direccionId)
+            : null,
 
         tipoEntrega: datos.tipoEntrega,
         metodoPago: datos.metodoPago,
         documento: datos.documento,
+
+        ...(!estaLogueado
+          ? {
+              nombreCliente: datosInvitado.nombreCliente.trim(),
+              emailCliente: datosInvitado.emailCliente.trim(),
+              telefonoCliente: datosInvitado.telefonoCliente.trim() || null,
+              direccionTexto:
+                datos.tipoEntrega === "despacho"
+                  ? datosInvitado.direccionTexto.trim()
+                  : null,
+              region:
+                datos.tipoEntrega === "despacho"
+                  ? datosInvitado.region.trim() || null
+                  : null,
+              comuna:
+                datos.tipoEntrega === "despacho"
+                  ? datosInvitado.comuna.trim()
+                  : null,
+              items: productosCheckout.map((producto) => ({
+                productoId: producto.id,
+                cantidad: producto.cantidad,
+              })),
+            }
+          : {}),
 
         ...(datos.documento === "factura"
           ? {
@@ -328,7 +457,9 @@ function Checkout() {
               ciudadFacturacion: datosFacturacion.ciudadFacturacion.trim(),
             }
           : {}),
-      });
+      };
+
+      const pedido = await crearPedido(token, payloadPedido);
 
       if (datos.metodoPago === "webpay") {
         message.loading("Redirigiendo a Webpay...", 1.5);
@@ -360,6 +491,32 @@ function Checkout() {
             numero: pedido.numero,
           },
         });
+
+        return;
+      }
+
+      if (datos.metodoPago === "mercadopago") {
+        message.loading("Redirigiendo a Mercado Pago...", 1.5);
+
+        const pago = await crearPagoMercadoPago(token, pedido.id);
+
+        const urlPago =
+          pago.urlPago ||
+          pago.url ||
+          pago.initPoint ||
+          pago.init_point ||
+          pago.sandboxInitPoint ||
+          pago.sandbox_init_point;
+
+        if (!urlPago) {
+          throw new Error("Mercado Pago no devolvió una URL de pago");
+        }
+
+        if (!estaLogueado) {
+          vaciarCarritoInvitado();
+        }
+
+        window.location.href = urlPago;
 
         return;
       }
@@ -443,60 +600,154 @@ function Checkout() {
               <div className="flex items-center gap-3 mb-6">
                 <UserOutlined className="text-2xl text-gray-900" />
 
-                <h2 className="text-2xl font-black text-gray-900">
-                  Datos de contacto
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <p className="text-sm font-bold text-gray-800">
-                    Nombre completo
-                  </p>
-                  <p className="mt-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                    {usuario?.nombre || "No registrado"}
-                  </p>
-                </div>
+                  <h2 className="text-2xl font-black text-gray-900">
+                    Datos de contacto
+                  </h2>
 
-                <div>
-                  <p className="text-sm font-bold text-gray-800">
-                    Correo electrónico
-                  </p>
-                  <p className="mt-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                    {usuario?.email || "No registrado"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-gray-800">Teléfono</p>
-                  <p className="mt-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                    {usuario?.telefono || "No registrado"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-bold text-gray-800">
-                    Documento
-                  </label>
-
-                  <Select
-                    size="large"
-                    value={datos.documento}
-                    onChange={(value) => actualizarCampo("documento", value)}
-                    className="!h-12 !mt-2 w-full"
-                    options={[
-                      {
-                        value: "boleta",
-                        label: "Comprobante de compra",
-                      },
-                      {
-                        value: "factura",
-                        label: "Factura proforma (no tributaria)",
-                      },
-                    ]}
-                  />
+                  {!estaLogueado && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Puedes comprar como invitado. Usaremos estos datos para el
+                      pedido.
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {estaLogueado ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">
+                      Nombre completo
+                    </p>
+
+                    <p className="mt-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                      {usuario?.nombre || "No registrado"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">
+                      Correo electrónico
+                    </p>
+
+                    <p className="mt-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                      {usuario?.email || "No registrado"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">Teléfono</p>
+
+                    <p className="mt-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                      {usuario?.telefono || "No registrado"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Documento
+                    </label>
+
+                    <Select
+                      size="large"
+                      value={datos.documento}
+                      onChange={(value) => actualizarCampo("documento", value)}
+                      className="!h-12 !mt-2 w-full"
+                      options={[
+                        {
+                          value: "boleta",
+                          label: "Comprobante de compra",
+                        },
+                        {
+                          value: "factura",
+                          label: "Factura proforma (no tributaria)",
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Nombre completo
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: Juan Pérez"
+                      prefix={<UserOutlined className="text-gray-400" />}
+                      value={datosInvitado.nombreCliente}
+                      onChange={(e) =>
+                        actualizarDatoInvitado("nombreCliente", e.target.value)
+                      }
+                      className="!h-12 !mt-2 !rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Correo electrónico
+                    </label>
+
+                    <Input
+                      size="large"
+                      type="email"
+                      placeholder="Ej: correo@ejemplo.cl"
+                      prefix={<MailOutlined className="text-gray-400" />}
+                      value={datosInvitado.emailCliente}
+                      onChange={(e) =>
+                        actualizarDatoInvitado("emailCliente", e.target.value)
+                      }
+                      className="!h-12 !mt-2 !rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Teléfono
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: +56912345678"
+                      prefix={<PhoneOutlined className="text-gray-400" />}
+                      value={datosInvitado.telefonoCliente}
+                      onChange={(e) =>
+                        actualizarDatoInvitado(
+                          "telefonoCliente",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2 !rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Documento
+                    </label>
+
+                    <Select
+                      size="large"
+                      value={datos.documento}
+                      onChange={(value) => actualizarCampo("documento", value)}
+                      className="!h-12 !mt-2 w-full"
+                      options={[
+                        {
+                          value: "boleta",
+                          label: "Comprobante de compra",
+                        },
+                        {
+                          value: "factura",
+                          label: "Factura proforma (no tributaria)",
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Datos de facturación */}
@@ -687,35 +938,92 @@ function Checkout() {
 
               {datos.tipoEntrega === "despacho" && (
                 <div className="mt-6">
-                  <label className="text-sm font-bold text-gray-800">
-                    Dirección de despacho
-                  </label>
+                  {estaLogueado ? (
+                    <>
+                      <label className="text-sm font-bold text-gray-800">
+                        Dirección de despacho
+                      </label>
 
-                  <Select
-                    size="large"
-                    placeholder="Selecciona una dirección guardada"
-                    value={datos.direccionId || undefined}
-                    onChange={(value) => actualizarCampo("direccionId", value)}
-                    className="!h-12 !mt-2 w-full"
-                    options={direcciones.map((direccion) => ({
-                      value: direccion.id,
-                      label: `${direccion.direccion} - ${direccion.comuna}`,
-                    }))}
-                  />
+                      <Select
+                        size="large"
+                        placeholder="Selecciona una dirección guardada"
+                        value={datos.direccionId || undefined}
+                        onChange={(value) =>
+                          actualizarCampo("direccionId", value)
+                        }
+                        className="!h-12 !mt-2 w-full"
+                        options={direcciones.map((direccion) => ({
+                          value: direccion.id,
+                          label: `${direccion.direccion} - ${direccion.comuna}`,
+                        }))}
+                      />
 
-                  {direcciones.length === 0 && (
-                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <p className="text-sm text-amber-800 font-bold">
-                        No tienes direcciones guardadas.
+                      {direcciones.length === 0 && (
+                        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                          <p className="text-sm text-amber-800 font-bold">
+                            No tienes direcciones guardadas.
+                          </p>
+
+                          <Link
+                            to="/mi-cuenta"
+                            className="text-sm font-bold underline text-amber-900"
+                          >
+                            Agregar dirección en Mi cuenta
+                          </Link>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-sm font-bold text-gray-800">
+                        Dirección de despacho
+                      </label>
+
+                      <p className="text-sm text-gray-600 mt-1 mb-4">
+                        Ingresa la dirección donde quieres recibir tu pedido.
                       </p>
 
-                      <Link
-                        to="/mi-cuenta"
-                        className="text-sm font-bold underline text-amber-900"
-                      >
-                        Agregar dirección en Mi cuenta
-                      </Link>
-                    </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="md:col-span-2">
+                          <Input
+                            size="large"
+                            placeholder="Ej: Av. Providencia 1234, depto 501"
+                            value={datosInvitado.direccionTexto}
+                            onChange={(e) =>
+                              actualizarDatoInvitado(
+                                "direccionTexto",
+                                e.target.value,
+                              )
+                            }
+                            className="!h-12 !rounded-xl"
+                          />
+                        </div>
+
+                        <div>
+                          <Input
+                            size="large"
+                            placeholder="Comuna"
+                            value={datosInvitado.comuna}
+                            onChange={(e) =>
+                              actualizarDatoInvitado("comuna", e.target.value)
+                            }
+                            className="!h-12 !rounded-xl"
+                          />
+                        </div>
+
+                        <div>
+                          <Input
+                            size="large"
+                            placeholder="Región"
+                            value={datosInvitado.region}
+                            onChange={(e) =>
+                              actualizarDatoInvitado("region", e.target.value)
+                            }
+                            className="!h-12 !rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -737,25 +1045,6 @@ function Checkout() {
                 className="w-full"
               >
                 <div className="space-y-4">
-                  {/* Transferencia */}
-                  <label
-                    className={`block border rounded-2xl p-5 cursor-pointer transition ${
-                      datos.metodoPago === "transferencia"
-                        ? "border-gray-950 bg-gray-50"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
-                    }`}
-                  >
-                    <Radio value="transferencia">
-                      <span className="font-black text-gray-900">
-                        Transferencia bancaria
-                      </span>
-                    </Radio>
-
-                    <p className="text-sm text-gray-600 mt-2 ml-6">
-                      Recibirás los datos bancarios al confirmar el pedido.
-                    </p>
-                  </label>
-
                   {/* Webpay */}
                   <label
                     className={`block border rounded-2xl p-5 cursor-pointer transition ${
@@ -775,64 +1064,71 @@ function Checkout() {
                     </p>
                   </label>
 
-                  {/* Oneclick */}
-                  <label
-                    className={`block border rounded-2xl p-5 transition ${
-                      datos.metodoPago === "oneclick"
-                        ? "border-gray-950 bg-gray-50"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
-                    } ${
-                      mediosPago.length === 0
-                        ? "opacity-60 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }`}
-                  >
-                    <Radio value="oneclick" disabled={mediosPago.length === 0}>
-                      <span className="font-black text-gray-900">
-                        Tarjeta guardada / Oneclick
-                      </span>
-                    </Radio>
+                  {estaLogueado && (
+                    <>
+                      {/* Oneclick */}
+                      <label
+                        className={`block border rounded-2xl p-5 transition ${
+                          datos.metodoPago === "oneclick"
+                            ? "border-gray-950 bg-gray-50"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        } ${
+                          mediosPago.length === 0
+                            ? "opacity-60 cursor-not-allowed"
+                            : "cursor-pointer"
+                        }`}
+                      >
+                        <Radio
+                          value="oneclick"
+                          disabled={mediosPago.length === 0}
+                        >
+                          <span className="font-black text-gray-900">
+                            Tarjeta guardada / Oneclick
+                          </span>
+                        </Radio>
 
-                    <p className="text-sm text-gray-600 mt-2 ml-6">
-                      Paga con una tarjeta previamente inscrita en Transbank
-                      Oneclick.
-                    </p>
+                        <p className="text-sm text-gray-600 mt-2 ml-6">
+                          Paga con una tarjeta previamente inscrita en Transbank
+                          Oneclick.
+                        </p>
 
-                    {cargandoMediosPago && (
-                      <p className="text-xs text-gray-500 font-bold mt-2 ml-6">
-                        Cargando tarjetas guardadas...
-                      </p>
-                    )}
+                        {cargandoMediosPago && (
+                          <p className="text-xs text-gray-500 font-bold mt-2 ml-6">
+                            Cargando tarjetas guardadas...
+                          </p>
+                        )}
 
-                    {!cargandoMediosPago && mediosPago.length === 0 && (
-                      <p className="text-xs text-orange-600 font-bold mt-2 ml-6">
-                        No tienes tarjetas guardadas. Agrégala desde Mi cuenta →
-                        Medios de pago.
-                      </p>
-                    )}
+                        {!cargandoMediosPago && mediosPago.length === 0 && (
+                          <p className="text-xs text-orange-600 font-bold mt-2 ml-6">
+                            No tienes tarjetas guardadas. Agrégala desde Mi
+                            cuenta → Medios de pago.
+                          </p>
+                        )}
 
-                    {datos.metodoPago === "oneclick" &&
-                      mediosPago.length > 0 && (
-                        <div className="mt-4 ml-6">
-                          <Select
-                            size="large"
-                            value={medioPagoSeleccionadoId || undefined}
-                            onChange={(value) =>
-                              setMedioPagoSeleccionadoId(String(value))
-                            }
-                            className="w-full"
-                            options={mediosPago.map((medio) => ({
-                              value: String(medio.id),
-                              label: `${medio.tipoTarjeta || "Tarjeta"}${
-                                medio.ultimos4
-                                  ? ` terminada en ${medio.ultimos4}`
-                                  : ""
-                              }`,
-                            }))}
-                          />
-                        </div>
-                      )}
-                  </label>
+                        {datos.metodoPago === "oneclick" &&
+                          mediosPago.length > 0 && (
+                            <div className="mt-4 ml-6">
+                              <Select
+                                size="large"
+                                value={medioPagoSeleccionadoId || undefined}
+                                onChange={(value) =>
+                                  setMedioPagoSeleccionadoId(String(value))
+                                }
+                                className="w-full"
+                                options={mediosPago.map((medio) => ({
+                                  value: String(medio.id),
+                                  label: `${medio.tipoTarjeta || "Tarjeta"}${
+                                    medio.ultimos4
+                                      ? ` terminada en ${medio.ultimos4}`
+                                      : ""
+                                  }`,
+                                }))}
+                              />
+                            </div>
+                          )}
+                      </label>
+                    </>
+                  )}
 
                   {/* Mercado Pago */}
                   <label
@@ -932,7 +1228,9 @@ function Checkout() {
                   <span className="font-bold text-emerald-600">
                     {cargandoDespacho
                       ? "Calculando..."
-                      : datos.tipoEntrega === "despacho" && !datos.direccionId
+                      : estaLogueado &&
+                          datos.tipoEntrega === "despacho" &&
+                          !datos.direccionId
                         ? "Pendiente"
                         : resumen.despacho === 0
                           ? "Gratis"

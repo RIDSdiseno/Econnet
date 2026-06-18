@@ -355,12 +355,17 @@ export const vaciarCarritoUsuario = async (token) => {
 
 
 export const crearPedido = async (token, datos) => {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const respuesta = await fetch(`${API_URL}/pedidos`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify(datos),
   });
 
@@ -461,12 +466,17 @@ export const obtenerProductosDestacados = async () => {
 
 
 export const crearPagoWebpay = async (token, pedidoId) => {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const respuesta = await fetch(`${API_URL}/pagos/webpay/crear`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify({ pedidoId }),
   });
 
@@ -478,6 +488,32 @@ export const crearPagoWebpay = async (token, pedidoId) => {
 
   return data.data;
 };
+
+
+export const crearPagoMercadoPago = async (token, pedidoId) => {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const respuesta = await fetch(`${API_URL}/pagos/mercadopago/crear`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ pedidoId }),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al crear pago con Mercado Pago");
+  }
+
+  return data.data;
+};
+
 
 
 export const suscribirseNewsletter = async (email) => {
@@ -721,3 +757,4 @@ export const responderMiSolicitud = async (
 
   return data;
 };
+

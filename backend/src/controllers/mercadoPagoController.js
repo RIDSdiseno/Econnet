@@ -456,7 +456,7 @@ export async function procesarPagoMercadoPagoPorId(
                 },
             });
 
-            if (pedidoActual.descuento > 0) {
+            if (pedidoActual.usuarioId && pedidoActual.descuento > 0) {
                 await tx.usuario.update({
                     where: {
                         id: pedidoActual.usuarioId,
@@ -477,11 +477,13 @@ export async function procesarPagoMercadoPagoPorId(
                 });
             }
 
-            await tx.carritoItem.deleteMany({
-                where: {
-                    usuarioId: pedidoActual.usuarioId,
-                },
-            });
+            if (pedidoActual.usuarioId) {
+                await tx.carritoItem.deleteMany({
+                    where: {
+                        usuarioId: pedidoActual.usuarioId,
+                    },
+                });
+            }
 
             return {
                 pedidoId: pedidoActual.id,
@@ -515,24 +517,41 @@ export async function crearPagoMercadoPago(req, res) {
             });
         }
 
+        const usuarioAutenticado = req.usuario || null;
+
         /*
-         * Solo permitimos pagar pedidos que pertenecen
-         * al usuario autenticado.
+         * Usuario logueado:
+         *   solo puede pagar sus propios pedidos.
+         *
+         * Invitado:
+         *   solo puede pagar pedidos sin usuario asociado.
          */
         const pedido = await prisma.pedido.findFirst({
             where: {
                 id: Number(pedidoId),
-                usuarioId: req.usuario.id,
+                ...(usuarioAutenticado
+                    ? {
+                        usuarioId: usuarioAutenticado.id,
+                    }
+                    : {
+                        usuarioId: null,
+                    }),
             },
             include: {
                 items: true,
             },
         });
-
         if (!pedido) {
             return res.status(404).json({
                 ok: false,
                 mensaje: "Pedido no encontrado",
+            });
+        }
+
+        if (!pedido.items || pedido.items.length === 0) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: "El pedido no tiene productos asociados",
             });
         }
 
@@ -787,65 +806,65 @@ export async function crearPagoMercadoPago(req, res) {
 }
 
 export async function retornoMercadoPago(req, res) {
-  const frontendUrl = obtenerFrontendUrl();
+    const frontendUrl = obtenerFrontendUrl();
 
-  const paymentId =
-    req.query?.payment_id ||
-    req.query?.collection_id;
+    const paymentId =
+        req.query?.payment_id ||
+        req.query?.collection_id;
 
-  try {
-    if (!paymentId) {
-      return res.redirect(
-        `${frontendUrl}/mi-cuenta` +
-          "?seccion=pedidos&info=mercadopago_sin_payment_id",
-      );
+    try {
+        if (!paymentId) {
+            return res.redirect(
+                `${frontendUrl}/mi-cuenta` +
+                "?seccion=pedidos&info=mercadopago_sin_payment_id",
+            );
+        }
+
+        const resultado =
+            await procesarPagoMercadoPagoPorId(paymentId);
+
+        if (
+            resultado.estado === "aprobado" &&
+            resultado.confirmado === true
+        ) {
+            return res.redirect(
+                `${frontendUrl}/compra-exitosa` +
+                `?pedidoId=${resultado.pedidoId}` +
+                `&metodo=mercadopago`,
+            );
+        }
+
+        if (resultado.estado === "revision_manual") {
+            return res.redirect(
+                `${frontendUrl}/mi-cuenta` +
+                "?seccion=pedidos" +
+                `&pedidoId=${resultado.pedidoId}` +
+                "&error=pago_aprobado_revision",
+            );
+        }
+
+        if (resultado.estado === "pendiente") {
+            return res.redirect(
+                `${frontendUrl}/mi-cuenta` +
+                "?seccion=pedidos" +
+                `&pedidoId=${resultado.pedidoId}` +
+                "&info=pago_pendiente",
+            );
+        }
+
+        return res.redirect(
+            `${frontendUrl}/carrito` +
+            `?pedidoId=${resultado.pedidoId}` +
+            `&error=mercadopago_${resultado.estado}`,
+        );
+    } catch (error) {
+        console.error(
+            "Error en retorno de Mercado Pago:",
+            error,
+        );
+
+        return res.redirect(
+            `${frontendUrl}/carrito?error=mercadopago_error`,
+        );
     }
-
-    const resultado =
-      await procesarPagoMercadoPagoPorId(paymentId);
-
-    if (
-      resultado.estado === "aprobado" &&
-      resultado.confirmado === true
-    ) {
-      return res.redirect(
-        `${frontendUrl}/compra-exitosa` +
-          `?pedidoId=${resultado.pedidoId}` +
-          `&metodo=mercadopago`,
-      );
-    }
-
-    if (resultado.estado === "revision_manual") {
-      return res.redirect(
-        `${frontendUrl}/mi-cuenta` +
-          "?seccion=pedidos" +
-          `&pedidoId=${resultado.pedidoId}` +
-          "&error=pago_aprobado_revision",
-      );
-    }
-
-    if (resultado.estado === "pendiente") {
-      return res.redirect(
-        `${frontendUrl}/mi-cuenta` +
-          "?seccion=pedidos" +
-          `&pedidoId=${resultado.pedidoId}` +
-          "&info=pago_pendiente",
-      );
-    }
-
-    return res.redirect(
-      `${frontendUrl}/carrito` +
-        `?pedidoId=${resultado.pedidoId}` +
-        `&error=mercadopago_${resultado.estado}`,
-    );
-  } catch (error) {
-    console.error(
-      "Error en retorno de Mercado Pago:",
-      error,
-    );
-
-    return res.redirect(
-      `${frontendUrl}/carrito?error=mercadopago_error`,
-    );
-  }
 }

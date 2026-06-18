@@ -195,7 +195,7 @@ model CarritoItem {
 
 model Pedido {
   id                     Int                 @id @default(autoincrement())
-  usuarioId              Int
+  usuarioId              Int?
   direccionId            Int?
   numero                 String              @unique
   estado                 String              @default("pendiente")
@@ -238,7 +238,7 @@ model Pedido {
   items                  PedidoItem[]
   seguimientos           PedidoSeguimiento[]
   direccion              Direccion?          @relation(fields: [direccionId], references: [id])
-  usuario                Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario                Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   ticketsSoporte         TicketSoporte[]
   pagos                  Pago[]
 

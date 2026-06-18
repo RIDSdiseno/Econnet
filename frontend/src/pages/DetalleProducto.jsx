@@ -19,6 +19,7 @@ import {
   agregarProductoCarrito,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -327,16 +328,19 @@ function DetalleProducto() {
   const agregarAlCarrito = async () => {
     if (!producto) return;
 
-    if (!estaLogueado || !token) {
-      message.info("Inicia sesión para agregar productos al carrito");
-      navigate("/login");
+    if (producto.stock <= 0) {
+      message.warning("Producto sin stock disponible");
       return;
     }
 
     try {
       setCargandoCarrito(true);
 
-      await agregarProductoCarrito(token, producto.id);
+      if (estaLogueado && token) {
+        await agregarProductoCarrito(token, producto.id);
+      } else {
+        agregarItemCarritoInvitado(producto.id, 1);
+      }
 
       message.success("Producto agregado al carrito");
     } catch (error) {
@@ -349,16 +353,19 @@ function DetalleProducto() {
   const comprarAhora = async () => {
     if (!producto) return;
 
-    if (!estaLogueado || !token) {
-      message.info("Inicia sesión para comprar este producto");
-      navigate("/login");
+    if (producto.stock <= 0) {
+      message.warning("Producto sin stock disponible");
       return;
     }
 
     try {
       setCargandoCarrito(true);
 
-      await agregarProductoCarrito(token, producto.id);
+      if (estaLogueado && token) {
+        await agregarProductoCarrito(token, producto.id);
+      } else {
+        agregarItemCarritoInvitado(producto.id, 1);
+      }
 
       message.success("Producto agregado al carrito");
       navigate("/carrito");
@@ -574,16 +581,12 @@ function DetalleProducto() {
                 </div>
 
                 <div className="flex justify-between items-end gap-4 border-t border-gray-200 pt-4">
-                  <span className="text-sm font-bold text-gray-900">
-                    Total
-                  </span>
+                  <span className="text-sm font-bold text-gray-900">Total</span>
 
                   <span className="text-2xl font-black text-gray-950">
                     {formatearPrecio(producto.precio)}
                   </span>
                 </div>
-
-                
               </div>
 
               <div className="mt-6 flex flex-col gap-4">

@@ -4,7 +4,10 @@ import {
   retornoWebpay,
   crearPagoOneclick,
 } from "../controllers/pagoController.js";
-import { protegerRuta } from "../middlewares/authMiddleware.js";
+import {
+  protegerRuta,
+  autenticacionOpcional,
+} from "../middlewares/authMiddleware.js";
 
 import {
   crearPagoMercadoPago,
@@ -13,13 +16,13 @@ import {
 
 const router = express.Router();
 
-router.post("/webpay/crear", protegerRuta, crearPagoWebpay);
+router.post("/webpay/crear", autenticacionOpcional, crearPagoWebpay);
 router.all("/webpay/retorno", retornoWebpay);
 
 router.post("/oneclick/crear", protegerRuta, crearPagoOneclick);
 router.post(
   "/mercadopago/crear",
-  protegerRuta,
+  autenticacionOpcional,
   crearPagoMercadoPago,
 );
 

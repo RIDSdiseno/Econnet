@@ -227,9 +227,21 @@ export async function crearPagoWebpay(req, res) {
       });
     }
 
-    const pedido = await prisma.pedido.findUnique({
+    const usuarioAutenticado = req.usuario || null;
+
+    const pedido = await prisma.pedido.findFirst({
       where: {
         id: Number(pedidoId),
+        ...(usuarioAutenticado
+          ? {
+            usuarioId: usuarioAutenticado.id,
+          }
+          : {
+            usuarioId: null,
+          }),
+      },
+      include: {
+        items: true,
       },
     });
 
@@ -240,10 +252,10 @@ export async function crearPagoWebpay(req, res) {
       });
     }
 
-    if (pedido.total <= 0) {
+    if (!pedido.items || pedido.items.length === 0) {
       return res.status(400).json({
         ok: false,
-        mensaje: "El total del pedido debe ser mayor a 0",
+        mensaje: "El pedido no tiene productos asociados",
       });
     }
 
@@ -257,7 +269,9 @@ export async function crearPagoWebpay(req, res) {
     const tx = crearTransaccionWebpay();
 
     const buyOrder = generarOrdenCompra(pedido.id);
-    const sessionId = `usuario-${pedido.usuarioId}`;
+    const sessionId = pedido.usuarioId
+      ? `usuario-${pedido.usuarioId}`
+      : `invitado-${pedido.id}`
     const amount = pedido.total;
 
     const returnUrl =
@@ -379,7 +393,7 @@ export async function retornoWebpay(req, res) {
             },
           });
 
-          if (pedido.descuento > 0) {
+          if (pedido.usuarioId && pedido.descuento > 0) {
             await txPrisma.usuario.update({
               where: {
                 id: pedido.usuarioId,
@@ -396,6 +410,14 @@ export async function retornoWebpay(req, res) {
               },
               data: {
                 usado: true,
+              },
+            });
+          }
+
+          if (pedido.usuarioId) {
+            await txPrisma.carritoItem.deleteMany({
+              where: {
+                usuarioId: pedido.usuarioId,
               },
             });
           }

@@ -11,12 +11,18 @@ import {
 } from "@ant-design/icons";
 import {
   obtenerCarrito,
+  obtenerProductoPorId,
   actualizarCantidadCarrito,
   eliminarProductoCarrito,
 } from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
+import {
+  obtenerCarritoInvitado,
+  actualizarCantidadCarritoInvitado,
+  eliminarItemCarritoInvitado,
+} from "../utils/carritoInvitado";
 
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
@@ -50,6 +56,28 @@ function adaptarItemCarrito(item) {
   };
 }
 
+function adaptarProductoInvitado(producto, cantidad) {
+  const imagenPrincipal =
+    producto.imagenes?.find((imagen) => imagen.esPrincipal)?.url ||
+    producto.imagenes?.find((imagen) => imagen.tipo !== "oferta_wide")?.url ||
+    producto.imagenes?.[0]?.url ||
+    "/img/productos/producto.png";
+
+  return {
+    id: producto.id,
+    nombre: producto.nombre,
+    marca: producto.marca?.nombre || "Sin marca",
+    categoria: producto.categoria?.nombre || "Sin categoría",
+    imagen: imagenPrincipal,
+    precio: producto.precio,
+    precioNormal: producto.precioNormal || producto.precio,
+    descuento: producto.enOferta ? producto.descuento || 0 : 0,
+    cantidad,
+    stock: producto.stock > 0 ? `${producto.stock} unidades` : "No disponible",
+    stockNumero: producto.stock,
+  };
+}
+
 function Carrito() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -63,19 +91,35 @@ function Carrito() {
     const cargarCarrito = async () => {
       if (cargandoAuth) return;
 
-      if (!estaLogueado || !token) {
-        message.info("Inicia sesión para ver tu carrito");
-        navigate("/login");
-        return;
-      }
-
       try {
         setCargandoCarrito(true);
 
-        const data = await obtenerCarrito(token);
-        const productosAdaptados = data.items.map(adaptarItemCarrito);
+        if (estaLogueado && token) {
+          const data = await obtenerCarrito(token);
+          const productosAdaptados = data.items.map(adaptarItemCarrito);
 
-        setProductosCarrito(productosAdaptados);
+          setProductosCarrito(productosAdaptados);
+          return;
+        }
+
+        const carritoInvitado = obtenerCarritoInvitado();
+
+        if (carritoInvitado.length === 0) {
+          setProductosCarrito([]);
+          return;
+        }
+
+        const productosAdaptados = await Promise.all(
+          carritoInvitado.map(async (item) => {
+            const producto = await obtenerProductoPorId(item.productoId);
+
+            return adaptarProductoInvitado(producto, item.cantidad);
+          }),
+        );
+
+        setProductosCarrito(
+          productosAdaptados.filter((producto) => producto.stockNumero > 0),
+        );
       } catch (error) {
         message.error(error.message || "No se pudo cargar el carrito");
       } finally {
@@ -84,7 +128,7 @@ function Carrito() {
     };
 
     cargarCarrito();
-  }, [token, estaLogueado, cargandoAuth, navigate]);
+  }, [token, estaLogueado, cargandoAuth]);
 
   const aumentarCantidad = async (id) => {
     const productoActual = productosCarrito.find(
@@ -103,17 +147,34 @@ function Carrito() {
     try {
       setActualizandoId(id);
 
-      const itemActualizado = await actualizarCantidadCarrito(
-        token,
-        id,
-        nuevaCantidad,
-      );
+      if (estaLogueado && token) {
+        const itemActualizado = await actualizarCantidadCarrito(
+          token,
+          id,
+          nuevaCantidad,
+        );
 
-      const productoAdaptado = adaptarItemCarrito(itemActualizado);
+        const productoAdaptado = adaptarItemCarrito(itemActualizado);
+
+        setProductosCarrito((productos) =>
+          productos.map((producto) =>
+            producto.id === id ? productoAdaptado : producto,
+          ),
+        );
+
+        return;
+      }
+
+      actualizarCantidadCarritoInvitado(id, nuevaCantidad);
 
       setProductosCarrito((productos) =>
         productos.map((producto) =>
-          producto.id === id ? productoAdaptado : producto,
+          producto.id === id
+            ? {
+                ...producto,
+                cantidad: nuevaCantidad,
+              }
+            : producto,
         ),
       );
     } catch (error) {
@@ -135,17 +196,34 @@ function Carrito() {
     try {
       setActualizandoId(id);
 
-      const itemActualizado = await actualizarCantidadCarrito(
-        token,
-        id,
-        nuevaCantidad,
-      );
+      if (estaLogueado && token) {
+        const itemActualizado = await actualizarCantidadCarrito(
+          token,
+          id,
+          nuevaCantidad,
+        );
 
-      const productoAdaptado = adaptarItemCarrito(itemActualizado);
+        const productoAdaptado = adaptarItemCarrito(itemActualizado);
+
+        setProductosCarrito((productos) =>
+          productos.map((producto) =>
+            producto.id === id ? productoAdaptado : producto,
+          ),
+        );
+
+        return;
+      }
+
+      actualizarCantidadCarritoInvitado(id, nuevaCantidad);
 
       setProductosCarrito((productos) =>
         productos.map((producto) =>
-          producto.id === id ? productoAdaptado : producto,
+          producto.id === id
+            ? {
+                ...producto,
+                cantidad: nuevaCantidad,
+              }
+            : producto,
         ),
       );
     } catch (error) {
@@ -159,7 +237,11 @@ function Carrito() {
     try {
       setActualizandoId(id);
 
-      await eliminarProductoCarrito(token, id);
+      if (estaLogueado && token) {
+        await eliminarProductoCarrito(token, id);
+      } else {
+        eliminarItemCarritoInvitado(id);
+      }
 
       setProductosCarrito((productos) =>
         productos.filter((producto) => producto.id !== id),
