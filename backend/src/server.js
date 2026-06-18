@@ -50,10 +50,13 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const origenesPermitidos = [
   "http://localhost:5173",
+  "https://econnet-store.netlify.app",
   process.env.FRONTEND_URL,
 ]
   .filter(Boolean)
-  .map((origen) => origen.replace(/\/+$/, ""));
+  .map((origen) => origen.trim().replace(/\/+$/, ""));
+
+console.log("Orígenes permitidos por CORS:", origenesPermitidos);
 
 const corsOptions = {
   origin: (origin, callback) => {
