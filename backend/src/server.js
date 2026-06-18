@@ -46,7 +46,7 @@ import adminProductosVendidosRoutes from "./routes/adminProductosVendidosRoutes.
 
 const app = express();
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 const origenesPermitidos = [
   "http://localhost:5173",
@@ -131,7 +131,7 @@ app.use("/api/admin/anuncios", adminAnuncioRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/admin/usuarios", adminUsuarioRoutes);
 app.use("/api/admin/soporte", adminSoporteRoutes);
-app.use( "/api/admin/productos-vendidos",adminProductosVendidosRoutes);
+app.use("/api/admin/productos-vendidos", adminProductosVendidosRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend de Econnet funcionando correctamente");
@@ -173,8 +173,12 @@ app.use((error, req, res, next) => {
   });
 });
 
+
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor ejecutándose en el puerto ${PORT}`);
 
   iniciarRevisionPedidosVencidos();
 });
+
+
