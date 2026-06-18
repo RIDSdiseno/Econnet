@@ -48,12 +48,56 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
-);
+const origenesPermitidos = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+]
+  .filter(Boolean)
+  .map((origen) => origen.replace(/\/+$/, ""));
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    /*
+     * Permitimos solicitudes sin Origin para:
+     * - Webhooks de Mercado Pago
+     * - Health checks de Railway
+     * - Postman y otros clientes servidor a servidor
+     */
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const origenNormalizado = origin.replace(/\/+$/, "");
+
+    if (origenesPermitidos.includes(origenNormalizado)) {
+      return callback(null, true);
+    }
+
+    console.warn(`Origen bloqueado por CORS: ${origin}`);
+
+    return callback(
+      new Error(`El origen ${origin} no está permitido por CORS`)
+    );
+  },
+
+  credentials: true,
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+  ],
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
@@ -129,7 +173,7 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor ejecutándose en el puerto ${PORT}`);
 
   iniciarRevisionPedidosVencidos();
