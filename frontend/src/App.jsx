@@ -32,6 +32,7 @@ import AuthCallback from "./pages/AuthCallback";
 import AdminSoporte from "./pages/admin/AdminSoporte";
 import AdminDetalleSoporte from "./pages/admin/AdminDetalleSoporte";
 import AdminProductosVendidos from "./pages/admin/AdminProductosVendidos";
+import AdminLogin from "./pages/admin/AdminLogin";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
           <Route path="/carrito" element={<Carrito />} />
           <Route path="/quienes-somos" element={<QuienesSomos />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/registro" element={<Registro />} />
           <Route path="/mi-cuenta" element={<MiCuenta />} />
           <Route path="/contacto" element={<Contacto />} />

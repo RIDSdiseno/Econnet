@@ -1,4 +1,4 @@
-import { Layout, Menu } from "antd";
+import { Button, Layout, Menu } from "antd";
 import {
   DashboardOutlined,
   ShoppingCartOutlined,
@@ -10,15 +10,24 @@ import {
   HomeOutlined,
   CustomerServiceOutlined,
   BarChartOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const { Header, Sider, Content } = Layout;
 
 function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { usuario, logout } = useAuth();
 
+  const cerrarSesion = () => {
+    logout();
+    navigate("/admin/login", {
+      replace: true,
+    });
+  };
   const menuItems = [
     {
       key: "/admin",
@@ -121,10 +130,25 @@ function AdminLayout() {
       </Sider>
 
       <Layout style={{ minHeight: "100vh" }}>
-        <Header className="!bg-white shadow-sm flex items-center px-6">
-          <h2 className="text-xl font-bold text-gray-900 m-0">
-            Panel de administración
-          </h2>
+        <Header className="!bg-white shadow-sm flex items-center justify-between px-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 m-0">
+              Panel de administración
+            </h2>
+
+            <p className="text-xs text-gray-500 m-0">
+              {usuario?.nombre || usuario?.email || "Administrador"}
+            </p>
+          </div>
+
+          <Button
+            danger
+            icon={<LogoutOutlined />}
+            onClick={cerrarSesion}
+            className="!font-semibold"
+          >
+            Cerrar sesión
+          </Button>
         </Header>
 
         <Content className="p-6 bg-gray-100">

@@ -33,7 +33,7 @@ function Login() {
     try {
       setCargando(true);
 
-      const data = await login({
+      await login({
         email: correo,
         password,
       });
@@ -44,11 +44,6 @@ function Login() {
 
       if (destino) {
         navigate(destino, { replace: true });
-        return;
-      }
-
-      if (data?.usuario?.rol === "admin") {
-        navigate("/admin", { replace: true });
         return;
       }
 
@@ -109,9 +104,13 @@ function Login() {
           {/* Lado izquierdo */}
           <section className="hidden lg:block">
             <div className="max-w-md">
-              <h1 className="text-5xl font-black tracking-widest text-gray-950">
-                ECONNET
-              </h1>
+              <div className="inline-flex bg-black rounded-2xl px-6 py-5">
+                <img
+                  src="/img/logo.png"
+                  alt="Logo Econnet"
+                  className="h-20 w-auto object-contain"
+                />
+              </div>
 
               <p className="text-2xl font-black text-emerald-500 mt-4">
                 Te damos la bienvenida
@@ -146,9 +145,13 @@ function Login() {
             <div className="w-full max-w-[520px] bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
               <div className="p-8 md:p-10">
                 <div className="text-center mb-8 lg:hidden">
-                  <h1 className="text-4xl font-black tracking-widest text-gray-950">
-                    ECONNET
-                  </h1>
+                  <div className="inline-flex bg-black rounded-2xl px-5 py-4">
+                    <img
+                      src="/img/logo.png"
+                      alt="Logo Econnet"
+                      className="h-14 w-auto object-contain"
+                    />
+                  </div>
 
                   <p className="text-emerald-500 font-black mt-2">
                     Te damos la bienvenida
