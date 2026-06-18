@@ -126,6 +126,17 @@ const formatearMetodoPago = (metodo) => {
   return metodos[metodo] || metodo || "No informado";
 };
 
+const formatearEstadoPago = (estadoPago) => {
+  const estados = {
+    pendiente: "Pendiente",
+    aprobado: "Aprobado",
+    rechazado: "Rechazado",
+    cancelado: "Cancelado",
+  };
+
+  return estados[estadoPago] || "Pendiente";
+};
+
 const formatearTipoEntrega = (tipo) => {
   if (tipo === "retiro") return "Retiro en tienda";
   return "Despacho a domicilio";
@@ -523,10 +534,19 @@ function SeguimientoCompra() {
                   </div>
 
                   <div>
-                    <p className="font-bold text-gray-700">Método de pago</p>
+                    <p className="font-bold text-gray-700">Estado de pago</p>
 
-                    <p className="text-gray-600 mt-1">
-                      {formatearMetodoPago(pedido.metodoPago)}
+                    <p
+                      className={`font-bold mt-1 ${
+                        pedido.estadoPago === "aprobado"
+                          ? "text-emerald-600"
+                          : pedido.estadoPago === "rechazado" ||
+                              pedido.estadoPago === "cancelado"
+                            ? "text-red-600"
+                            : "text-orange-600"
+                      }`}
+                    >
+                      {formatearEstadoPago(pedido.estadoPago)}
                     </p>
                   </div>
 

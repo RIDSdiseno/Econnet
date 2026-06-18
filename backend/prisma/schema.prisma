@@ -8,133 +8,111 @@ datasource db {
 }
 
 model Categoria {
-  id          Int      @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   nombre      String
-  slug        String   @unique
+  slug        String     @unique
   descripcion String?
-  activo      Boolean  @default(true)
-
+  activo      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   imagenUrl   String?
   publicId    String?
-  mostrarHome Boolean @default(true)
-  ordenHome   Int     @default(0)
-
-  productos Producto[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  mostrarHome Boolean    @default(true)
+  ordenHome   Int        @default(0)
+  productos   Producto[]
 
   @@map("categorias")
 }
 
 model Marca {
-  id          Int     @id @default(autoincrement())
-  nombre      String  @unique
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique
+  activo      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  grupo       String     @default("otras")
   logoUrl     String?
-  activo      Boolean @default(true)
-  mostrarHome Boolean @default(false)
-  grupo       String  @default("otras")
-  orden       Int     @default(0)
-
-  productos Producto[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  mostrarHome Boolean    @default(false)
+  orden       Int        @default(0)
+  productos   Producto[]
 
   @@map("marcas")
 }
+
 model Producto {
-  id Int @id @default(autoincrement())
-
-  nombre      String
-  slug        String  @unique
-  descripcion String?
-  precio      Int
-  stock       Int     @default(0)
-  sku         String? @unique
-  modelo      String?
-  garantia    String?
-  activo      Boolean @default(true)
-  destacado   Boolean @default(false)
-
-  enOferta               Boolean @default(false)
+  id                     Int                      @id @default(autoincrement())
+  nombre                 String
+  slug                   String                   @unique
+  descripcion            String?
+  precio                 Int
+  stock                  Int                      @default(0)
+  sku                    String?                  @unique
+  modelo                 String?
+  garantia               String?
+  activo                 Boolean                  @default(true)
+  categoriaId            Int
+  marcaId                Int?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  destacado              Boolean                  @default(false)
+  enOferta               Boolean                  @default(false)
   precioNormal           Int?
-  descuento              Int     @default(0)
+  descuento              Int                      @default(0)
   etiquetaOferta         String?
   etiquetaEnvio          String?
   etiquetaDisponibilidad String?
-
-  mostrarEnOfertas Boolean @default(false)
-  formatoOferta    String  @default("small")
-  ordenOferta      Int     @default(0)
-
-  categoriaId Int
-  marcaId     Int?
-
-  categoria Categoria @relation(fields: [categoriaId], references: [id])
-  marca     Marca?    @relation(fields: [marcaId], references: [id], onDelete: SetNull)
-
-  imagenes         ProductoImagen[]
-  especificaciones EspecificacionProducto[]
-
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  favoritos    Favorito[]
-  carritoItems CarritoItem[]
-  pedidoItems  PedidoItem[]
+  mostrarEnOfertas       Boolean                  @default(false)
+  formatoOferta          String                   @default("small")
+  ordenOferta            Int                      @default(0)
+  carritoItems           CarritoItem[]
+  favoritos              Favorito[]
+  pedidoItems            PedidoItem[]
+  especificaciones       EspecificacionProducto[]
+  imagenes               ProductoImagen[]
+  categoria              Categoria                @relation(fields: [categoriaId], references: [id])
+  marca                  Marca?                   @relation(fields: [marcaId], references: [id])
 
   @@map("productos")
 }
 
 model ProductoImagen {
-  id         Int @id @default(autoincrement())
-  productoId Int
-
+  id          Int      @id @default(autoincrement())
+  productoId  Int
   url         String
   publicId    String?
-  esPrincipal Boolean @default(false)
-  orden       Int     @default(0)
-  tipo        String  @default("galeria")
-
-  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  esPrincipal Boolean  @default(false)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tipo        String   @default("galeria")
+  producto    Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
   @@map("producto_imagenes")
 }
 
 model EspecificacionProducto {
-  id         Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   productoId Int
-
-  nombre String
-  valor  String
-  orden  Int    @default(0)
-
-  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  nombre     String
+  valor      String
+  orden      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
   @@map("producto_especificaciones")
 }
 
 model Anuncio {
-  id Int @id @default(autoincrement())
-
+  id        Int      @id @default(autoincrement())
   titulo    String?
   subtitulo String?
-
   imagenUrl String
   publicId  String?
-
   enlace    String
-  ubicacion String @default("promo_horizontal")
-
-  activo Boolean @default(true)
-  orden  Int     @default(0)
-
+  ubicacion String   @default("promo_horizontal")
+  activo    Boolean  @default(true)
+  orden     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -142,151 +120,154 @@ model Anuncio {
 }
 
 model Usuario {
-  id Int @id @default(autoincrement())
-
-  nombre       String
-  email        String  @unique
-  passwordHash String
-  telefono     String?
-  rut          String? @unique
-
-  aceptaTerminos    Boolean @default(false)
-  aceptaPromociones Boolean @default(false)
-  aceptaPublicidad  Boolean @default(false)
-
-  rol    String  @default("cliente")
-  activo Boolean @default(true)
-
-  direcciones Direccion[]
-  favoritos   Favorito[]
-
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  carritoItems CarritoItem[]
-  pedidos      Pedido[]
+  id                            Int                      @id @default(autoincrement())
+  nombre                        String
+  email                         String                   @unique
+  passwordHash                  String
+  telefono                      String?
+  rol                           String                   @default("cliente")
+  activo                        Boolean                  @default(true)
+  createdAt                     DateTime                 @default(now())
+  updatedAt                     DateTime                 @updatedAt
+  aceptaPromociones             Boolean                  @default(false)
+  aceptaPublicidad              Boolean                  @default(false)
+  aceptaTerminos                Boolean                  @default(false)
+  rut                           String?                  @unique
+  descuentoBienvenidaDisponible Boolean                  @default(false)
+  descuentoBienvenidaUsado      Boolean                  @default(false)
+  carritoItems                  CarritoItem[]
+  direcciones                   Direccion[]
+  favoritos                     Favorito[]
+  medioPagoInscripciones        MedioPagoInscripcion[]
+  mediosPago                    MedioPago[]
+  pedidos                       Pedido[]
+  respuestasSoporte             RespuestaTicketSoporte[] @relation("UsuarioRespuestasSoporte")
+  ticketsSoporte                TicketSoporte[]          @relation("UsuarioTicketsSoporte")
 
   @@map("usuarios")
 }
 
 model Direccion {
-  id        Int @id @default(autoincrement())
-  usuarioId Int
-
+  id           Int      @id @default(autoincrement())
+  usuarioId    Int
   nombre       String?
   direccion    String
-  region       String?
   comuna       String
-  calle        String?
-  numero       String?
-  departamento String?
+  region       String?
   telefono     String?
-  principal    Boolean @default(false)
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  pedidos   Pedido[]
+  principal    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  calle        String?
+  departamento String?
+  numero       String?
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  pedidos      Pedido[]
 
   @@map("direcciones")
 }
 
 model Favorito {
-  id         Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   usuarioId  Int
   productoId Int
-
-  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, productoId])
   @@map("favoritos")
 }
 
 model CarritoItem {
-  id         Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   usuarioId  Int
   productoId Int
-  cantidad   Int @default(1)
-
-  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  cantidad   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, productoId])
   @@map("carrito_items")
 }
 
 model Pedido {
-  id          Int  @id @default(autoincrement())
-  usuarioId   Int
-  direccionId Int?
-
-  numero String @unique
-  estado String @default("pendiente")
-
-  tipoEntrega String @default("despacho")
-  metodoPago  String @default("transferencia")
-  documento   String @default("boleta")
-
-  nombreCliente   String
-  emailCliente    String
-  telefonoCliente String?
-
-  direccionTexto String?
-  region         String?
-  comuna         String?
-
-  subtotal  Int
-  descuento Int @default(0)
-  despacho  Int @default(0)
-  total     Int
-
-  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  direccion Direccion? @relation(fields: [direccionId], references: [id], onDelete: SetNull)
-
-  items        PedidoItem[]
-  seguimientos PedidoSeguimiento[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                     Int                 @id @default(autoincrement())
+  usuarioId              Int
+  direccionId            Int?
+  numero                 String              @unique
+  estado                 String              @default("pendiente")
+  tipoEntrega            String              @default("despacho")
+  metodoPago             String              @default("transferencia")
+  documento              String              @default("boleta")
+  nombreCliente          String
+  emailCliente           String
+  telefonoCliente        String?
+  direccionTexto         String?
+  region                 String?
+  comuna                 String?
+  subtotal               Int
+  descuento              Int                 @default(0)
+  despacho               Int                 @default(0)
+  total                  Int
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  estadoPago             String              @default("pendiente")
+  ordenCompraPago        String?
+  tokenPago              String?
+  codigoAutorizacion     String?
+  fechaPago              DateTime?           @db.Timestamp(6)
+  neto                   Int                 @default(0)
+  iva                    Int                 @default(0)
+  rutFacturacion         String?
+  razonSocialFacturacion String?
+  giroFacturacion        String?
+  direccionFacturacion   String?
+  comunaFacturacion      String?
+  ciudadFacturacion      String?
+  documentoPdfUrl        String?
+  documentoPdfGenerado   Boolean             @default(false)
+  fechaDocumentoPdf      DateTime?           @db.Timestamp(6)
+  documentoEmailEstado   String              @default("pendiente")
+  fechaDocumentoEmail    DateTime?           @db.Timestamp(6)
+  errorDocumentoEmail    String?
+  fechaVencimientoPago   DateTime?           @db.Timestamp(6)
+  stockRestaurado        Boolean             @default(false)
+  items                  PedidoItem[]
+  seguimientos           PedidoSeguimiento[]
+  direccion              Direccion?          @relation(fields: [direccionId], references: [id])
+  usuario                Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ticketsSoporte         TicketSoporte[]
+  pagos                  Pago[]
 
   @@map("pedidos")
 }
 
 model PedidoItem {
-  id         Int @id @default(autoincrement())
-  pedidoId   Int
-  productoId Int
-
+  id             Int      @id @default(autoincrement())
+  pedidoId       Int
+  productoId     Int
   nombreProducto String
   marcaProducto  String?
   imagenUrl      String?
-
   precioUnitario Int
   cantidad       Int
   subtotal       Int
-
-  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
-
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto       Producto @relation(fields: [productoId], references: [id])
 
   @@map("pedido_items")
 }
 
 model TarifaDespacho {
-  id     Int    @id @default(autoincrement())
-  codigo String @unique
-  nombre String
-  precio Int
-
-  activo Boolean @default(true)
-
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  precio    Int
+  activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -294,16 +275,165 @@ model TarifaDespacho {
 }
 
 model PedidoSeguimiento {
+  id        Int      @id @default(autoincrement())
+  pedidoId  Int
+  estado    String
+  titulo    String
+  detalle   String?
+  createdAt DateTime @default(now())
+  pedido    Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@map("pedido_seguimiento")
+}
+
+model NewsletterSuscriptor {
+  id                  Int      @id @default(autoincrement())
+  email               String   @unique
+  activo              Boolean  @default(true)
+  codigoDescuento     String?
+  descuentoPorcentaje Int      @default(10)
+  usado               Boolean  @default(false)
+  createdAt           DateTime @default(now()) @db.Timestamp(6)
+  updatedAt           DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@map("newsletter_suscriptores")
+}
+
+model MedioPago {
+  id                 Int      @id @default(autoincrement())
+  usuarioId          Int
+  proveedor          String   @default("transbank_oneclick")
+  username           String
+  tbkUser            String   @unique
+  tipoTarjeta        String?
+  ultimos4           String?
+  codigoAutorizacion String?
+  activo             Boolean  @default(true)
+  principal          Boolean  @default(false)
+  createdAt          DateTime @default(now()) @db.Timestamp(6)
+  updatedAt          DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  usuario            Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("medios_pago")
+}
+
+model MedioPagoInscripcion {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  token     String   @unique
+  username  String
+  estado    String   @default("pendiente")
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("medio_pago_inscripciones")
+}
+
+model TicketSoporte {
+  id               Int                      @id @default(autoincrement())
+  codigo           String                   @unique
+  usuarioId        Int?
+  pedidoId         Int?
+  nombre           String
+  email            String
+  telefono         String?
+  categoria        String
+  asunto           String
+  mensaje          String
+  estado           String                   @default("nuevo")
+  prioridad        String                   @default("normal")
+  aceptaPrivacidad Boolean                  @default(false)
+  cerradoAt        DateTime?                @db.Timestamp(6)
+  createdAt        DateTime                 @default(now()) @db.Timestamp(6)
+  updatedAt        DateTime                 @default(now()) @updatedAt @db.Timestamp(6)
+  respuestas       RespuestaTicketSoporte[]
+  pedido           Pedido?                  @relation(fields: [pedidoId], references: [id], onUpdate: NoAction)
+  usuario          Usuario?                 @relation("UsuarioTicketsSoporte", fields: [usuarioId], references: [id], onUpdate: NoAction)
+
+  @@index([usuarioId])
+  @@index([pedidoId])
+  @@index([estado])
+  @@index([categoria])
+  @@map("tickets_soporte")
+}
+
+model RespuestaTicketSoporte {
+  id        Int           @id @default(autoincrement())
+  ticketId  Int
+  autorId   Int?
+  tipoAutor String
+  mensaje   String
+  createdAt DateTime      @default(now()) @db.Timestamp(6)
+  autor     Usuario?      @relation("UsuarioRespuestasSoporte", fields: [autorId], references: [id], onUpdate: NoAction)
+  ticket    TicketSoporte @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ticketId])
+  @@index([autorId])
+  @@map("ticket_soporte_respuestas")
+}
+
+model Pago {
   id       Int @id @default(autoincrement())
   pedidoId Int
 
-  estado  String
-  titulo  String
-  detalle String?
+  proveedor String
+  estado    String @default("pendiente")
 
-  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  monto  Int
+  moneda String @default("CLP")
+
+  referenciaExterna String @unique
+
+  preferenciaId   String? @unique
+  pagoProveedorId String?
+
+  estadoProveedor String?
+  detalleEstado   String?
+
+  urlPago String?
+
+  fechaAprobacion DateTime?
+
+  respuestaProveedor Json?
+
+  pedido   Pedido        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  webhooks PagoWebhook[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([proveedor, pagoProveedorId])
+  @@index([pedidoId])
+  @@index([proveedor, estado])
+  @@map("pagos")
+}
+
+model PagoWebhook {
+  id     Int  @id @default(autoincrement())
+  pagoId Int?
+
+  proveedor         String
+  eventoProveedorId String
+
+  recursoId String?
+  requestId String?
+  tipo      String?
+  accion    String?
+
+  procesado Boolean @default(false)
+
+  payload Json?
+  error   String?
+
+  procesadoAt DateTime?
+
+  pago Pago? @relation(fields: [pagoId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 
-  @@map("pedido_seguimiento")
+  @@unique([proveedor, eventoProveedorId])
+  @@index([pagoId])
+  @@index([proveedor, recursoId])
+  @@map("pago_webhooks")
 }

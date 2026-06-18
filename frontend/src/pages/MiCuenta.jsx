@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button, Modal, Input, Select, Checkbox, message } from "antd";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Button,
+  Modal,
+  Input,
+  Select,
+  Checkbox,
+  Pagination,
+  message,
+} from "antd";
 import {
   UserOutlined,
   HomeOutlined,
@@ -12,6 +20,11 @@ import {
   RightOutlined,
   PlusOutlined,
   DeleteOutlined,
+  CustomerServiceOutlined,
+  MessageOutlined,
+  ReloadOutlined,
+  SendOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -25,6 +38,12 @@ import {
   eliminarFavoritoUsuario,
   obtenerPedidos,
   cambiarPasswordUsuario,
+  obtenerMediosPago,
+  iniciarInscripcionMedioPago,
+  eliminarMedioPago,
+  obtenerMisSolicitudes,
+  obtenerMiSolicitudPorId,
+  responderMiSolicitud,
 } from "../services/api";
 import { opcionesRegiones } from "../data/regionesComunasChile";
 
@@ -34,6 +53,107 @@ function formatearPrecio(valor) {
     currency: "CLP",
     maximumFractionDigits: 0,
   }).format(valor);
+}
+
+function formatearEstadoPedido(estado) {
+  const estados = {
+    pendiente: "Pedido recibido",
+    confirmado: "Confirmado",
+    preparando: "Preparando",
+    empaquetando: "Empaquetando",
+    en_despacho: "En camino",
+    entregado: "Entregado",
+    cancelado: "Cancelado",
+  };
+
+  return estados[estado] || estado || "Sin estado";
+}
+
+function formatearEstadoPago(estadoPago) {
+  const estados = {
+    pendiente: "Pago pendiente",
+    aprobado: "Pago aprobado",
+    rechazado: "Pago rechazado",
+    cancelado: "Pago cancelado",
+  };
+
+  return estados[estadoPago] || "Pago pendiente";
+}
+
+function claseEstadoPedido(estado) {
+  if (estado === "cancelado") {
+    return "text-red-700 bg-red-100";
+  }
+
+  if (estado === "entregado") {
+    return "text-emerald-700 bg-emerald-100";
+  }
+
+  return "text-blue-700 bg-blue-100";
+}
+
+function claseEstadoPago(estadoPago) {
+  if (estadoPago === "aprobado") {
+    return "text-emerald-700 bg-emerald-100";
+  }
+
+  if (estadoPago === "rechazado" || estadoPago === "cancelado") {
+    return "text-red-700 bg-red-100";
+  }
+
+  return "text-orange-700 bg-orange-100";
+}
+
+function formatearEstadoSoporte(estado) {
+  const estados = {
+    nuevo: "Nuevo",
+    en_revision: "En revisión",
+    respondido: "Respondido",
+    cerrado: "Cerrado",
+  };
+
+  return estados[estado] || estado || "Sin estado";
+}
+
+function claseEstadoSoporte(estado) {
+  const clases = {
+    nuevo: "text-blue-700 bg-blue-100",
+    en_revision: "text-orange-700 bg-orange-100",
+    respondido: "text-emerald-700 bg-emerald-100",
+    cerrado: "text-gray-700 bg-gray-200",
+  };
+
+  return clases[estado] || "text-gray-700 bg-gray-100";
+}
+
+function formatearCategoriaSoporte(categoria) {
+  const categorias = {
+    despacho: "Despacho y seguimiento",
+    pagos: "Pagos",
+    documentos: "Boletas y facturas",
+    garantias: "Garantías",
+    devoluciones: "Devoluciones",
+    reembolsos: "Reembolsos",
+    compras_empresas: "Compras para empresas",
+    soporte_tecnico: "Soporte técnico",
+    otro: "Otro",
+  };
+
+  return categorias[categoria] || categoria || "Sin categoría";
+}
+
+function formatearFechaSoporte(fecha) {
+  if (!fecha) {
+    return "Sin fecha";
+  }
+
+  return new Date(fecha).toLocaleString("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 const menuCuenta = [
@@ -51,6 +171,11 @@ const menuCuenta = [
     key: "pedidos",
     label: "Mis pedidos",
     icon: <ShoppingOutlined />,
+  },
+  {
+    key: "solicitudes",
+    label: "Mis solicitudes",
+    icon: <CustomerServiceOutlined />,
   },
   {
     key: "pagos",
@@ -71,6 +196,7 @@ const menuCuenta = [
 
 function MiCuenta() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const {
     usuario,
     token,
@@ -102,6 +228,29 @@ function MiCuenta() {
   const [cargandoFavoritos, setCargandoFavoritos] = useState(false);
   const [pedidos, setPedidos] = useState([]);
   const [cargandoPedidos, setCargandoPedidos] = useState(false);
+  const [mediosPago, setMediosPago] = useState([]);
+  const [cargandoMediosPago, setCargandoMediosPago] = useState(false);
+  const [agregandoMedioPago, setAgregandoMedioPago] = useState(false);
+
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [cargandoSolicitudes, setCargandoSolicitudes] = useState(false);
+  const [paginaSolicitudes, setPaginaSolicitudes] = useState(1);
+  const [recargarSolicitudes, setRecargarSolicitudes] = useState(0);
+
+  const [paginacionSolicitudes, setPaginacionSolicitudes] = useState({
+    pagina: 1,
+    limite: 10,
+    total: 0,
+    totalPaginas: 1,
+  });
+
+  const [modalSolicitud, setModalSolicitud] = useState(false);
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
+  const [cargandoDetalleSolicitud, setCargandoDetalleSolicitud] =
+    useState(false);
+  const [respuestaSolicitud, setRespuestaSolicitud] = useState("");
+  const [enviandoRespuestaSolicitud, setEnviandoRespuestaSolicitud] =
+    useState(false);
 
   const [nuevaDireccion, setNuevaDireccion] = useState({
     region: "",
@@ -175,6 +324,164 @@ function MiCuenta() {
 
     cargarPedidos();
   }, [token, estaLogueado]);
+
+  useEffect(() => {
+    const cargarMediosPago = async () => {
+      if (!token || !estaLogueado) return;
+
+      try {
+        setCargandoMediosPago(true);
+
+        const data = await obtenerMediosPago(token);
+        setMediosPago(data);
+      } catch (error) {
+        message.error(
+          error.message || "No se pudieron cargar los medios de pago",
+        );
+      } finally {
+        setCargandoMediosPago(false);
+      }
+    };
+
+    cargarMediosPago();
+  }, [token, estaLogueado]);
+
+  useEffect(() => {
+    const seccion = searchParams.get("seccion");
+    const ok = searchParams.get("ok");
+    const error = searchParams.get("error");
+
+    if (seccion === "medios-pago" || seccion === "pagos") {
+      setSeccionActiva("pagos");
+    }
+    if (seccion === "solicitudes") {
+      setSeccionActiva("solicitudes");
+    }
+    if (ok === "medio_pago_guardado") {
+      message.success("Medio de pago guardado correctamente");
+    }
+
+    if (error) {
+      const mensajes = {
+        sin_token: "No se recibió el token de inscripción",
+        inscripcion_no_encontrada:
+          "No se encontró la inscripción del medio de pago",
+        inscripcion_ya_procesada: "Esta inscripción ya fue procesada",
+        inscripcion_rechazada: "La inscripción de la tarjeta fue rechazada",
+        inscripcion_error: "Ocurrió un error al guardar el medio de pago",
+        inscripcion_cancelada: "La inscripción de la tarjeta fue cancelada",
+      };
+
+      message.error(mensajes[error] || "No se pudo guardar el medio de pago");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const cargarSolicitudesUsuario = async () => {
+      if (!token || !estaLogueado || seccionActiva !== "solicitudes") {
+        return;
+      }
+
+      try {
+        setCargandoSolicitudes(true);
+
+        const data = await obtenerMisSolicitudes(token, paginaSolicitudes, 10);
+
+        setSolicitudes(data.solicitudes || []);
+
+        setPaginacionSolicitudes(
+          data.paginacion || {
+            pagina: paginaSolicitudes,
+            limite: 10,
+            total: 0,
+            totalPaginas: 1,
+          },
+        );
+      } catch (error) {
+        message.error(error.message || "No se pudieron cargar tus solicitudes");
+      } finally {
+        setCargandoSolicitudes(false);
+      }
+    };
+
+    cargarSolicitudesUsuario();
+  }, [
+    token,
+    estaLogueado,
+    seccionActiva,
+    paginaSolicitudes,
+    recargarSolicitudes,
+  ]);
+
+  const abrirDetalleSolicitud = async (id) => {
+    try {
+      setModalSolicitud(true);
+      setSolicitudSeleccionada(null);
+      setRespuestaSolicitud("");
+      setCargandoDetalleSolicitud(true);
+
+      const solicitud = await obtenerMiSolicitudPorId(token, id);
+
+      setSolicitudSeleccionada(solicitud);
+    } catch (error) {
+      message.error(error.message || "No se pudo abrir la solicitud");
+
+      setModalSolicitud(false);
+    } finally {
+      setCargandoDetalleSolicitud(false);
+    }
+  };
+
+  const cerrarDetalleSolicitud = () => {
+    setModalSolicitud(false);
+    setSolicitudSeleccionada(null);
+    setRespuestaSolicitud("");
+  };
+
+  const enviarRespuestaSolicitud = async () => {
+    const mensajeLimpio = respuestaSolicitud.trim();
+
+    if (!solicitudSeleccionada) {
+      return;
+    }
+
+    if (!mensajeLimpio) {
+      message.warning("Escribe una respuesta");
+      return;
+    }
+
+    if (mensajeLimpio.length > 5000) {
+      message.warning("La respuesta no puede superar los 5000 caracteres");
+      return;
+    }
+
+    try {
+      setEnviandoRespuestaSolicitud(true);
+
+      const data = await responderMiSolicitud(
+        token,
+        solicitudSeleccionada.id,
+        mensajeLimpio,
+      );
+
+      message.success(data.mensaje || "Respuesta enviada correctamente");
+
+      setRespuestaSolicitud("");
+
+      const solicitudActualizada = await obtenerMiSolicitudPorId(
+        token,
+        solicitudSeleccionada.id,
+      );
+
+      setSolicitudSeleccionada(solicitudActualizada);
+
+      setRecargarSolicitudes((prev) => prev + 1);
+    } catch (error) {
+      message.error(error.message || "No se pudo enviar la respuesta");
+    } finally {
+      setEnviandoRespuestaSolicitud(false);
+    }
+  };
 
   const cerrarSesion = () => {
     logout();
@@ -373,6 +680,51 @@ function MiCuenta() {
       message.success("Producto eliminado de favoritos");
     } catch (error) {
       message.error(error.message || "No se pudo eliminar el favorito");
+    }
+  };
+
+  const redirigirAOneclick = ({ urlWebpay, token }) => {
+    const form = document.createElement("form");
+
+    form.method = "POST";
+    form.action = urlWebpay;
+
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "TBK_TOKEN";
+    input.value = token;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    form.submit();
+  };
+
+  const agregarMedioPago = async () => {
+    try {
+      setAgregandoMedioPago(true);
+
+      const data = await iniciarInscripcionMedioPago(token);
+
+      redirigirAOneclick({
+        urlWebpay: data.urlWebpay,
+        token: data.token,
+      });
+    } catch (error) {
+      message.error(error.message || "No se pudo iniciar la inscripción");
+    } finally {
+      setAgregandoMedioPago(false);
+    }
+  };
+
+  const quitarMedioPago = async (id) => {
+    try {
+      await eliminarMedioPago(token, id);
+
+      setMediosPago((prev) => prev.filter((item) => item.id !== id));
+      message.success("Medio de pago eliminado");
+    } catch (error) {
+      message.error(error.message || "No se pudo eliminar el medio de pago");
     }
   };
 
@@ -667,8 +1019,20 @@ function MiCuenta() {
                               </div>
 
                               <div className="flex flex-wrap gap-3 mt-4">
-                                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                                  {pedido.estado}
+                                <span
+                                  className={`text-xs font-bold px-3 py-1 rounded-full ${claseEstadoPedido(
+                                    pedido.estado,
+                                  )}`}
+                                >
+                                  {formatearEstadoPedido(pedido.estado)}
+                                </span>
+
+                                <span
+                                  className={`text-xs font-bold px-3 py-1 rounded-full ${claseEstadoPago(
+                                    pedido.estadoPago,
+                                  )}`}
+                                >
+                                  {formatearEstadoPago(pedido.estadoPago)}
                                 </span>
 
                                 <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full">
@@ -711,24 +1075,263 @@ function MiCuenta() {
               </div>
             )}
 
+            {seccionActiva === "solicitudes" && (
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">
+                      Mis solicitudes
+                    </h2>
+
+                    <p className="text-gray-600 mt-1">
+                      Revisa tus consultas y las respuestas del equipo de
+                      soporte.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      size="large"
+                      icon={<ReloadOutlined />}
+                      loading={cargandoSolicitudes}
+                      onClick={() => setRecargarSolicitudes((prev) => prev + 1)}
+                      className="!h-12 !rounded-2xl !font-bold"
+                    >
+                      Actualizar
+                    </Button>
+
+                    <Link to="/contacto">
+                      <Button
+                        size="large"
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        className="!h-12 !rounded-2xl !bg-gray-950 !border-gray-950 !font-bold hover:!bg-black"
+                      >
+                        Nueva solicitud
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {cargandoSolicitudes && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center text-gray-600">
+                    Cargando solicitudes...
+                  </div>
+                )}
+
+                {!cargandoSolicitudes && solicitudes.length === 0 && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+                    <CustomerServiceOutlined className="text-4xl text-gray-400 mb-4" />
+
+                    <h3 className="text-xl font-black text-gray-900">
+                      No tienes solicitudes asociadas
+                    </h3>
+
+                    <p className="text-gray-600 mt-2 max-w-xl">
+                      Las consultas que envíes mientras tengas tu sesión
+                      iniciada aparecerán en esta sección.
+                    </p>
+
+                    <Link to="/contacto">
+                      <Button
+                        size="large"
+                        className="!mt-5 !rounded-xl !font-bold"
+                      >
+                        Contactar a soporte
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+
+                {!cargandoSolicitudes && solicitudes.length > 0 && (
+                  <>
+                    <div className="space-y-5">
+                      {solicitudes.map((solicitud) => (
+                        <article
+                          key={solicitud.id}
+                          className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <CustomerServiceOutlined className="text-2xl text-gray-900" />
+
+                                <p className="font-black text-gray-900 break-all">
+                                  {solicitud.codigo}
+                                </p>
+
+                                <span
+                                  className={`text-xs font-bold px-3 py-1 rounded-full ${claseEstadoSoporte(
+                                    solicitud.estado,
+                                  )}`}
+                                >
+                                  {formatearEstadoSoporte(solicitud.estado)}
+                                </span>
+                              </div>
+
+                              <h3 className="text-xl font-black text-gray-900 mt-4">
+                                {solicitud.asunto}
+                              </h3>
+
+                              <div className="flex flex-wrap gap-3 mt-3">
+                                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                                  {formatearCategoriaSoporte(
+                                    solicitud.categoria,
+                                  )}
+                                </span>
+
+                                <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full">
+                                  <MessageOutlined className="mr-1" />
+                                  {solicitud.cantidadRespuestas || 0} respuesta
+                                  {(solicitud.cantidadRespuestas || 0) !== 1
+                                    ? "s"
+                                    : ""}
+                                </span>
+                              </div>
+
+                              <p className="text-sm text-gray-500 mt-4">
+                                <ClockCircleOutlined className="mr-2" />
+                                Creada el{" "}
+                                {formatearFechaSoporte(solicitud.createdAt)}
+                              </p>
+
+                              <p className="text-sm text-gray-500 mt-1">
+                                Última actualización:{" "}
+                                {formatearFechaSoporte(solicitud.updatedAt)}
+                              </p>
+                            </div>
+
+                            <Button
+                              size="large"
+                              onClick={() =>
+                                abrirDetalleSolicitud(solicitud.id)
+                              }
+                              className="!rounded-xl !font-bold"
+                            >
+                              Ver solicitud
+                            </Button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+
+                    {paginacionSolicitudes.total > 10 && (
+                      <div className="flex justify-center mt-8">
+                        <Pagination
+                          current={paginaSolicitudes}
+                          pageSize={10}
+                          total={paginacionSolicitudes.total}
+                          showSizeChanger={false}
+                          onChange={(pagina) => setPaginaSolicitudes(pagina)}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {seccionActiva === "pagos" && (
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                  Medios de pago
-                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">
+                      Medios de pago
+                    </h2>
 
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
-                  <CreditCardOutlined className="text-4xl text-gray-400 mb-4" />
+                    <p className="text-gray-600 mt-1">
+                      Guarda tarjetas de forma segura mediante Transbank
+                      Oneclick.
+                    </p>
+                  </div>
 
-                  <h3 className="text-xl font-black text-gray-900">
-                    No tienes medios de pago guardados
-                  </h3>
-
-                  <p className="text-gray-600 mt-2">
-                    Más adelante podrás guardar tarjetas o métodos de pago para
-                    comprar más rápido.
-                  </p>
+                  <Button
+                    size="large"
+                    icon={<PlusOutlined />}
+                    loading={agregandoMedioPago}
+                    onClick={agregarMedioPago}
+                    className="!h-12 !rounded-2xl !font-bold"
+                  >
+                    Agregar tarjeta
+                  </Button>
                 </div>
+
+                {cargandoMediosPago && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center text-gray-600">
+                    Cargando medios de pago...
+                  </div>
+                )}
+
+                {!cargandoMediosPago && mediosPago.length === 0 && (
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+                    <CreditCardOutlined className="text-4xl text-gray-400 mb-4" />
+
+                    <h3 className="text-xl font-black text-gray-900">
+                      No tienes medios de pago guardados
+                    </h3>
+
+                    <p className="text-gray-600 mt-2">
+                      Agrega una tarjeta de forma segura. Econnet no almacena el
+                      número completo ni el CVV de tu tarjeta.
+                    </p>
+
+                    <Button
+                      size="large"
+                      icon={<PlusOutlined />}
+                      loading={agregandoMedioPago}
+                      onClick={agregarMedioPago}
+                      className="!mt-5 !h-12 !rounded-2xl !font-bold"
+                    >
+                      Agregar tarjeta
+                    </Button>
+                  </div>
+                )}
+
+                {!cargandoMediosPago && mediosPago.length > 0 && (
+                  <div className="space-y-5">
+                    {mediosPago.map((medio) => (
+                      <article
+                        key={medio.id}
+                        className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+                            <CreditCardOutlined className="text-2xl text-gray-700" />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-xl font-black text-gray-900">
+                                {medio.tipoTarjeta || "Tarjeta"}
+                                {medio.ultimos4
+                                  ? ` terminada en ${medio.ultimos4}`
+                                  : ""}
+                              </h3>
+
+                              {medio.principal && (
+                                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
+                                  Principal
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-sm text-gray-500 mt-1">
+                              Guardada con Transbank Oneclick
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => quitarMedioPago(medio.id)}
+                          className="text-sm font-bold text-red-600 underline"
+                        >
+                          Eliminar
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -925,7 +1528,209 @@ function MiCuenta() {
       </main>
 
       <Footer />
+      <Modal
+        open={modalSolicitud}
+        onCancel={cerrarDetalleSolicitud}
+        footer={null}
+        width={850}
+        centered
+        destroyOnHidden
+        title="Detalle de la solicitud"
+      >
+        {cargandoDetalleSolicitud && (
+          <div className="py-12 text-center text-gray-600">
+            Cargando solicitud...
+          </div>
+        )}
 
+        {!cargandoDetalleSolicitud && solicitudSeleccionada && (
+          <div className="space-y-6 pt-3">
+            {solicitudSeleccionada.pedido && (
+              <div className="border border-blue-200 bg-blue-50 rounded-2xl p-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <ShoppingOutlined className="text-2xl text-blue-700" />
+
+                      <div>
+                        <p className="text-sm font-bold text-blue-700">
+                          Pedido relacionado
+                        </p>
+
+                        <h3 className="text-lg font-black text-gray-900">
+                          {solicitudSeleccionada.pedido.numero}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 mt-4">
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full ${claseEstadoPedido(
+                          solicitudSeleccionada.pedido.estado,
+                        )}`}
+                      >
+                        {formatearEstadoPedido(
+                          solicitudSeleccionada.pedido.estado,
+                        )}
+                      </span>
+
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full ${claseEstadoPago(
+                          solicitudSeleccionada.pedido.estadoPago,
+                        )}`}
+                      >
+                        {formatearEstadoPago(
+                          solicitudSeleccionada.pedido.estadoPago,
+                        )}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-gray-500 mt-4">
+                      Compra realizada el{" "}
+                      {formatearFechaSoporte(
+                        solicitudSeleccionada.pedido.createdAt,
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="md:text-right">
+                    <p className="text-sm text-gray-500">Total</p>
+
+                    <p className="text-2xl font-black text-gray-950">
+                      {formatearPrecio(solicitudSeleccionada.pedido.total)}
+                    </p>
+
+                    <Button
+                      size="large"
+                      onClick={() => {
+                        const pedidoId = solicitudSeleccionada.pedido.id;
+
+                        cerrarDetalleSolicitud();
+
+                        navigate(`/seguimiento-compra?pedidoId=${pedidoId}`);
+                      }}
+                      className="!mt-4 !rounded-xl !font-bold"
+                    >
+                      Ver seguimiento del pedido
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-black text-gray-900 mb-3">
+                Consulta original
+              </h3>
+
+              <div className="border border-gray-200 bg-gray-50 rounded-2xl p-5 whitespace-pre-wrap break-words">
+                {solicitudSeleccionada.mensaje}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-black text-gray-900 mb-3">
+                Historial de respuestas
+              </h3>
+
+              {solicitudSeleccionada.respuestas?.length === 0 && (
+                <div className="border border-dashed border-gray-300 rounded-2xl p-6 text-center text-gray-500">
+                  Esta solicitud todavía no tiene respuestas.
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {solicitudSeleccionada.respuestas?.map((respuesta) => {
+                  const esCliente = respuesta.tipoAutor === "cliente";
+
+                  return (
+                    <div
+                      key={respuesta.id}
+                      className={`rounded-2xl border p-5 ${
+                        esCliente
+                          ? "border-gray-300 bg-gray-50"
+                          : "border-blue-200 bg-blue-50"
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold px-2 py-1 rounded bg-white">
+                            {esCliente ? "Tú" : "Soporte Econnet"}
+                          </span>
+
+                          <span className="text-sm font-bold text-gray-800">
+                            {respuesta.autor?.nombre ||
+                              (esCliente ? usuario.nombre : "Administrador")}
+                          </span>
+                        </div>
+
+                        <span className="text-xs text-gray-500">
+                          {formatearFechaSoporte(respuesta.createdAt)}
+                        </span>
+                      </div>
+
+                      <p className="text-gray-800 mt-4 whitespace-pre-wrap break-words">
+                        {respuesta.mensaje}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {solicitudSeleccionada.estado === "cerrado" ? (
+              <div className="rounded-2xl border border-gray-300 bg-gray-100 p-5">
+                <p className="font-black text-gray-900">
+                  Esta solicitud está cerrada
+                </p>
+
+                <p className="text-sm text-gray-600 mt-1">
+                  No puedes agregar nuevas respuestas mientras permanezca
+                  cerrada.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <h3 className="font-black text-gray-900 mb-3">
+                  Agregar respuesta
+                </h3>
+
+                <Input.TextArea
+                  rows={5}
+                  maxLength={5000}
+                  showCount
+                  placeholder="Escribe aquí tu respuesta..."
+                  value={respuestaSolicitud}
+                  onChange={(e) => setRespuestaSolicitud(e.target.value)}
+                  className="!rounded-xl"
+                />
+
+                <div className="flex justify-end gap-3 mt-5">
+                  <Button
+                    size="large"
+                    onClick={cerrarDetalleSolicitud}
+                    className="!rounded-xl !font-bold"
+                  >
+                    Cerrar
+                  </Button>
+
+                  <Button
+                    size="large"
+                    type="primary"
+                    icon={<SendOutlined />}
+                    loading={enviandoRespuestaSolicitud}
+                    disabled={enviandoRespuestaSolicitud}
+                    onClick={enviarRespuestaSolicitud}
+                    className="!bg-gray-950 !border-gray-950 !font-bold hover:!bg-black !rounded-xl"
+                  >
+                    Enviar respuesta
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
       <Modal
         open={modalDireccion}
         onCancel={() => setModalDireccion(false)}

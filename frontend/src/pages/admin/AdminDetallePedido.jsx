@@ -38,6 +38,12 @@ const coloresEstado = {
   entregado: "green",
   cancelado: "red",
 };
+const coloresEstadoPago = {
+  pendiente: "orange",
+  aprobado: "green",
+  rechazado: "red",
+  cancelado: "volcano",
+};
 
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
@@ -62,6 +68,14 @@ function formatearFecha(fecha) {
 function textoEstado(estado) {
   if (!estado) return "Sin estado";
   return estado.replace("_", " ").toUpperCase();
+}
+
+function textoMetodoPago(metodo) {
+  if (metodo === "webpay") return "Webpay";
+  if (metodo === "transferencia") return "Transferencia bancaria";
+  if (metodo === "mercadopago") return "Mercado Pago";
+
+  return metodo || "No definido";
 }
 
 function AdminDetallePedido() {
@@ -182,9 +196,7 @@ function AdminDetallePedido() {
             Volver
           </Button>
 
-          <h1 className="text-2xl font-bold mb-1">
-            Pedido {pedido.numero}
-          </h1>
+          <h1 className="text-2xl font-bold mb-1">Pedido {pedido.numero}</h1>
 
           <p className="text-gray-500">
             Detalle completo del pedido seleccionado.
@@ -204,12 +216,24 @@ function AdminDetallePedido() {
         <div className="xl:col-span-2 space-y-6">
           <Card className="rounded-2xl shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-              <div>
-                <p className="text-gray-500 mb-1">Estado actual</p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div>
+                  <p className="text-gray-500 mb-1">Estado pedido</p>
 
-                <Tag color={coloresEstado[pedido.estado] || "default"}>
-                  {textoEstado(pedido.estado)}
-                </Tag>
+                  <Tag color={coloresEstado[pedido.estado] || "default"}>
+                    {textoEstado(pedido.estado)}
+                  </Tag>
+                </div>
+
+                <div>
+                  <p className="text-gray-500 mb-1">Estado pago</p>
+
+                  <Tag
+                    color={coloresEstadoPago[pedido.estadoPago] || "default"}
+                  >
+                    {textoEstado(pedido.estadoPago || "pendiente")}
+                  </Tag>
+                </div>
               </div>
 
               <div>
@@ -247,8 +271,32 @@ function AdminDetallePedido() {
               </Descriptions.Item>
 
               <Descriptions.Item label="Método de pago">
-                {pedido.metodoPago || "No definido"}
+                {textoMetodoPago(pedido.metodoPago)}
               </Descriptions.Item>
+
+              <Descriptions.Item label="Estado de pago">
+                <Tag color={coloresEstadoPago[pedido.estadoPago] || "default"}>
+                  {textoEstado(pedido.estadoPago || "pendiente")}
+                </Tag>
+              </Descriptions.Item>
+
+              {pedido.metodoPago === "webpay" && (
+                <>
+                  <Descriptions.Item label="Orden Webpay">
+                    {pedido.ordenCompraPago || "Sin orden registrada"}
+                  </Descriptions.Item>
+
+                  <Descriptions.Item label="Código autorización">
+                    {pedido.codigoAutorizacion || "Sin código"}
+                  </Descriptions.Item>
+
+                  <Descriptions.Item label="Fecha de pago">
+                    {pedido.fechaPago
+                      ? formatearFecha(pedido.fechaPago)
+                      : "Sin fecha de pago"}
+                  </Descriptions.Item>
+                </>
+              )}
 
               <Descriptions.Item label="Documento">
                 {pedido.documento || "No definido"}
@@ -257,12 +305,7 @@ function AdminDetallePedido() {
           </Card>
 
           <Card className="rounded-2xl shadow-sm">
-            <Descriptions
-              title="Cliente"
-              bordered
-              column={1}
-              size="middle"
-            >
+            <Descriptions title="Cliente" bordered column={1} size="middle">
               <Descriptions.Item label="Nombre">
                 {pedido.usuario?.nombre || pedido.nombreCliente || "Sin nombre"}
               </Descriptions.Item>
@@ -272,7 +315,9 @@ function AdminDetallePedido() {
               </Descriptions.Item>
 
               <Descriptions.Item label="Teléfono">
-                {pedido.usuario?.telefono || pedido.telefonoCliente || "Sin teléfono"}
+                {pedido.usuario?.telefono ||
+                  pedido.telefonoCliente ||
+                  "Sin teléfono"}
               </Descriptions.Item>
 
               <Descriptions.Item label="RUT">
@@ -282,12 +327,7 @@ function AdminDetallePedido() {
           </Card>
 
           <Card className="rounded-2xl shadow-sm">
-            <Descriptions
-              title="Entrega"
-              bordered
-              column={1}
-              size="middle"
-            >
+            <Descriptions title="Entrega" bordered column={1} size="middle">
               <Descriptions.Item label="Dirección">
                 {pedido.direccionTexto || "No aplica"}
               </Descriptions.Item>

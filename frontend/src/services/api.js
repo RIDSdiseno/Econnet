@@ -458,3 +458,266 @@ export const obtenerProductosDestacados = async () => {
   return data.productos || [];
 };
 
+
+
+export const crearPagoWebpay = async (token, pedidoId) => {
+  const respuesta = await fetch(`${API_URL}/pagos/webpay/crear`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ pedidoId }),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al crear pago con Webpay");
+  }
+
+  return data.data;
+};
+
+
+export const suscribirseNewsletter = async (email) => {
+  const respuesta = await fetch(`${API_URL}/newsletter/suscribirse`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudo registrar la suscripción");
+  }
+
+  return data;
+};
+
+
+export const obtenerMediosPago = async (token) => {
+  const respuesta = await fetch(`${API_URL}/medios-pago`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudieron obtener los medios de pago");
+  }
+
+  return data.mediosPago;
+};
+
+export const iniciarInscripcionMedioPago = async (token) => {
+  const respuesta = await fetch(`${API_URL}/medios-pago/oneclick/iniciar`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudo iniciar la inscripción");
+  }
+
+  return data.data;
+};
+
+export const eliminarMedioPago = async (token, id) => {
+  const respuesta = await fetch(`${API_URL}/medios-pago/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudo eliminar el medio de pago");
+  }
+
+  return data;
+};
+
+export const crearPagoOneclick = async (token, pedidoId, medioPagoId) => {
+  const respuesta = await fetch(`${API_URL}/pagos/oneclick/crear`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      pedidoId,
+      medioPagoId,
+    }),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "Error al procesar pago con Oneclick");
+  }
+
+  return data.data;
+};
+
+
+export const descargarDocumentoPedido = async (token, pedidoId) => {
+  const respuesta = await fetch(
+    `${API_URL}/documentos/pedidos/${pedidoId}/pdf`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!respuesta.ok) {
+    let mensaje = "No se pudo descargar el documento";
+
+    try {
+      const data = await respuesta.json();
+      mensaje = data.mensaje || mensaje;
+    } catch {
+      // La respuesta no venía en formato JSON.
+    }
+
+    throw new Error(mensaje);
+  }
+
+  const blob = await respuesta.blob();
+
+  const contentDisposition =
+    respuesta.headers.get("Content-Disposition") || "";
+
+  const coincidencia = contentDisposition.match(
+    /filename="?([^"]+)"?/i,
+  );
+
+  const nombreArchivo =
+    coincidencia?.[1] || `documento-pedido-${pedidoId}.pdf`;
+
+  return {
+    blob,
+    nombreArchivo,
+  };
+};
+
+export const crearTicketSoporte = async (datos, token = null) => {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const respuesta = await fetch(`${API_URL}/soporte`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(datos),
+  });
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudo enviar la solicitud de soporte",
+    );
+  }
+
+  return data;
+};
+
+export const obtenerMisSolicitudes = async (
+  token,
+  pagina = 1,
+  limite = 10,
+) => {
+  const params = new URLSearchParams({
+    pagina: String(pagina),
+    limite: String(limite),
+  });
+
+  const respuesta = await fetch(
+    `${API_URL}/soporte/mis-solicitudes?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudieron obtener tus solicitudes",
+    );
+  }
+
+  return data;
+};
+
+export const obtenerMiSolicitudPorId = async (token, id) => {
+  const respuesta = await fetch(
+    `${API_URL}/soporte/mis-solicitudes/${id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudo obtener la solicitud",
+    );
+  }
+
+  return data.solicitud;
+};
+
+export const responderMiSolicitud = async (
+  token,
+  id,
+  mensajeRespuesta,
+) => {
+  const respuesta = await fetch(
+    `${API_URL}/soporte/mis-solicitudes/${id}/respuestas`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        mensaje: mensajeRespuesta,
+      }),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudo enviar la respuesta",
+    );
+  }
+
+  return data;
+};

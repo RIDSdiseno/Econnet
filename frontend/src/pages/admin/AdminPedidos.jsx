@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Button, Select, message, Card } from "antd";
+import { Table, Tag, Button, Select, message, Card, Tooltip } from "antd";
 import { EyeOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -28,6 +28,13 @@ const coloresEstado = {
   cancelado: "red",
 };
 
+const coloresEstadoPago = {
+  pendiente: "orange",
+  aprobado: "green",
+  rechazado: "red",
+  cancelado: "volcano",
+};
+
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
     style: "currency",
@@ -46,6 +53,16 @@ function formatearFecha(fecha) {
   const anio = fechaObj.getFullYear();
 
   return `${dia}/${mes}/${anio}`;
+}
+
+function acortarNumeroPedido(numero) {
+  if (!numero) return "Sin número";
+
+  if (numero.length <= -4) {
+    return numero;
+  }
+
+  return `${numero.slice(0, 7)}...${numero.slice(-4)}`;
 }
 
 function AdminPedidos() {
@@ -96,7 +113,18 @@ function AdminPedidos() {
       title: "N° Pedido",
       dataIndex: "numero",
       key: "numero",
-      render: (numero) => <strong>{numero}</strong>,
+      width: 90,
+      render: (numero, pedido) => (
+        <Tooltip title={numero}>
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/pedidos/${pedido.id}`)}
+            className="font-bold text-gray-950 hover:text-blue-600 hover:underline whitespace-nowrap"
+          >
+            {acortarNumeroPedido(numero)}
+          </button>
+        </Tooltip>
+      ),
     },
     {
       title: "Cliente",
@@ -132,27 +160,51 @@ function AdminPedidos() {
       ),
     },
     {
-      title: "Pago",
+      title: "Método pago",
       dataIndex: "metodoPago",
       key: "metodoPago",
-      render: (metodo) => metodo || "No definido",
+      width: 130,
+      render: (metodo) => (
+        <span className="capitalize whitespace-nowrap">
+          {metodo === "webpay"
+            ? "Webpay"
+            : metodo === "transferencia"
+              ? "Transferencia"
+              : metodo || "No definido"}
+        </span>
+      ),
     },
+    {
+      title: "Estado pago",
+      dataIndex: "estadoPago",
+      key: "estadoPago",
+      width: 130,
+      render: (estadoPago) => (
+        <Tag color={coloresEstadoPago[estadoPago] || "default"}>
+          {(estadoPago || "pendiente").replace("_", " ").toUpperCase()}
+        </Tag>
+      ),
+    },
+
     {
       title: "Total",
       dataIndex: "total",
       key: "total",
       render: (total) => <strong>{formatearPrecio(total)}</strong>,
     },
+
     {
-      title: "Estado actual",
+      title: "Estado pedido",
       dataIndex: "estado",
       key: "estado",
+      width: 140,
       render: (estado) => (
         <Tag color={coloresEstado[estado] || "default"}>
           {estado?.replace("_", " ").toUpperCase()}
         </Tag>
       ),
     },
+
     {
       title: "Cambiar estado",
       key: "cambiarEstado",
@@ -167,6 +219,7 @@ function AdminPedidos() {
         />
       ),
     },
+
     {
       title: "Acciones",
       key: "acciones",
@@ -210,7 +263,7 @@ function AdminPedidos() {
             pageSize: 8,
           }}
           scroll={{
-            x: 1100,
+            x: 1270,
           }}
         />
       </Card>

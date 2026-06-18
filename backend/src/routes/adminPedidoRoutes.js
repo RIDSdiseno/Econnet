@@ -5,13 +5,40 @@ import { soloAdmin } from "../middlewares/adminMiddleware.js";
 import {
     obtenerPedidosAdmin,
     obtenerPedidoAdminPorId,
-    actualizarEstadoPedidoAdmin,
 } from "../controllers/adminPedidoController.js";
+
+import { actualizarEstadoPedido } from "../controllers/pedidoController.js";
 
 const router = express.Router();
 
-router.get("/", protegerRuta, soloAdmin, obtenerPedidosAdmin);
-router.get("/:id", protegerRuta, soloAdmin, obtenerPedidoAdminPorId);
-router.put("/:id/estado", protegerRuta, soloAdmin, actualizarEstadoPedidoAdmin);
+router.get(
+    "/",
+    protegerRuta,
+    soloAdmin,
+    obtenerPedidosAdmin,
+);
+
+router.get(
+    "/:id",
+    protegerRuta,
+    soloAdmin,
+    obtenerPedidoAdminPorId,
+);
+
+router.put(
+    "/:id/estado",
+    protegerRuta,
+    soloAdmin,
+    (req, res, next) => {
+        console.log(
+            "RUTA ADMIN DE CAMBIO DE ESTADO EJECUTADA",
+            req.params.id,
+            req.body,
+        );
+
+        next();
+    },
+    actualizarEstadoPedido,
+);
 
 export default router;

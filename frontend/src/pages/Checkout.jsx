@@ -18,9 +18,11 @@ import { useAuth } from "../context/AuthContext";
 import {
   obtenerCarrito,
   obtenerDirecciones,
-  obtenerPedidos,
   crearPedido,
   calcularDespacho,
+  crearPagoWebpay,
+  obtenerMediosPago,
+  crearPagoOneclick,
 } from "../services/api";
 
 function formatearPrecio(valor) {
@@ -46,7 +48,8 @@ function adaptarItemCheckout(item) {
     marca: producto.marca?.nombre || "Sin marca",
     imagen: imagenPrincipal,
     precio: producto.precio,
-    precioNormal: producto.precio,
+    precioNormal: producto.precioNormal || producto.precio,
+    descuento: producto.enOferta ? producto.descuento || 0 : 0,
     cantidad: item.cantidad,
   };
 }
@@ -59,8 +62,12 @@ function Checkout() {
   const [direcciones, setDirecciones] = useState([]);
   const [cargandoCheckout, setCargandoCheckout] = useState(true);
 
+  const [mediosPago, setMediosPago] = useState([]);
+  const [cargandoMediosPago, setCargandoMediosPago] = useState(false);
+  const [medioPagoSeleccionadoId, setMedioPagoSeleccionadoId] = useState("");
+
   const [procesandoCompra, setProcesandoCompra] = useState(false);
-  const [aplicaDescuentoNuevo, setAplicaDescuentoNuevo] = useState(false);
+
   const [despachoCalculado, setDespachoCalculado] = useState({
     codigo: "RETIRO",
     nombre: "Retiro en tienda",
@@ -75,6 +82,26 @@ function Checkout() {
     metodoPago: "transferencia",
     documento: "boleta",
   });
+
+  const [datosFacturacion, setDatosFacturacion] = useState({
+    rutFacturacion: "",
+    razonSocialFacturacion: "",
+    giroFacturacion: "",
+    direccionFacturacion: "",
+    comunaFacturacion: "",
+    ciudadFacturacion: "",
+  });
+
+  const actualizarDatoFacturacion = (campo, valor) => {
+    setDatosFacturacion((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  };
+
+  const tieneDescuentoBienvenida =
+    usuario?.descuentoBienvenidaDisponible === true &&
+    usuario?.descuentoBienvenidaUsado === false;
 
   const actualizarCampo = (campo, valor) => {
     setDatos((prev) => ({
@@ -96,17 +123,15 @@ function Checkout() {
       try {
         setCargandoCheckout(true);
 
-        const [carritoData, direccionesData, pedidosData] = await Promise.all([
+        const [carritoData, direccionesData] = await Promise.all([
           obtenerCarrito(token),
           obtenerDirecciones(token),
-          obtenerPedidos(token),
         ]);
 
         const productosAdaptados = carritoData.items.map(adaptarItemCheckout);
 
         setProductosCheckout(productosAdaptados);
         setDirecciones(direccionesData);
-        setAplicaDescuentoNuevo(pedidosData.length === 0);
 
         const direccionPrincipal =
           direccionesData.find((direccion) => direccion.principal) ||
@@ -167,43 +192,81 @@ function Checkout() {
     cargandoCheckout,
   ]);
 
+  useEffect(() => {
+    const cargarMediosPago = async () => {
+      if (!token || !estaLogueado) return;
+
+      try {
+        setCargandoMediosPago(true);
+
+        const data = await obtenerMediosPago(token);
+        setMediosPago(data);
+
+        const principal = data.find((medio) => medio.principal) || data[0];
+
+        if (principal) {
+          setMedioPagoSeleccionadoId(String(principal.id));
+        }
+      } catch (error) {
+        message.error(
+          error.message || "No se pudieron cargar los medios de pago",
+        );
+      } finally {
+        setCargandoMediosPago(false);
+      }
+    };
+
+    cargarMediosPago();
+  }, [token, estaLogueado]);
+
   const resumen = useMemo(() => {
     const subtotal = productosCheckout.reduce(
-      (total, producto) => total + producto.precioNormal * producto.cantidad,
-      0,
-    );
-
-    const totalProductos = productosCheckout.reduce(
       (total, producto) => total + producto.precio * producto.cantidad,
       0,
     );
 
-    const descuentoProductos = subtotal - totalProductos;
-
-    const descuentoNuevoUsuario = aplicaDescuentoNuevo
-      ? Math.round(totalProductos * 0.1)
+    const descuentoBienvenida = tieneDescuentoBienvenida
+      ? Math.round(subtotal * 0.1)
       : 0;
 
     const despacho = despachoCalculado?.precio || 0;
 
+    const total = subtotal - descuentoBienvenida + despacho;
+
+    const neto = Math.round(total / 1.19);
+    const iva = total - neto;
+
     return {
       subtotal,
-      descuentoProductos,
-      descuentoNuevoUsuario,
-      descuento: descuentoProductos + descuentoNuevoUsuario,
+      descuentoBienvenida,
+      descuento: descuentoBienvenida,
       despacho,
-      total: totalProductos - descuentoNuevoUsuario + despacho,
+      neto,
+      iva,
+      total,
       cantidadProductos: productosCheckout.reduce(
         (total, producto) => total + producto.cantidad,
         0,
       ),
     };
-  }, [
-    productosCheckout,
-    datos.tipoEntrega,
-    aplicaDescuentoNuevo,
-    despachoCalculado,
-  ]);
+  }, [productosCheckout, tieneDescuentoBienvenida, despachoCalculado]);
+
+  const redirigirAWebpay = ({ url, token }) => {
+    const form = document.createElement("form");
+
+    form.method = "POST";
+    form.action = url;
+
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "token_ws";
+    input.value = token;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    form.submit();
+  };
 
   const finalizarCompra = async () => {
     if (productosCheckout.length === 0) {
@@ -217,16 +280,89 @@ function Checkout() {
       return;
     }
 
+    if (datos.documento === "factura") {
+      const datosFacturaCompletos =
+        datosFacturacion.rutFacturacion.trim() &&
+        datosFacturacion.razonSocialFacturacion.trim() &&
+        datosFacturacion.giroFacturacion.trim() &&
+        datosFacturacion.direccionFacturacion.trim() &&
+        datosFacturacion.comunaFacturacion.trim() &&
+        datosFacturacion.ciudadFacturacion.trim();
+
+      if (!datosFacturaCompletos) {
+        message.warning("Completa todos los datos de facturación");
+        return;
+      }
+    }
+
+    if (datos.metodoPago === "oneclick" && !medioPagoSeleccionadoId) {
+      message.warning("Selecciona una tarjeta guardada");
+      return;
+    }
+
     try {
       setProcesandoCompra(true);
 
       const pedido = await crearPedido(token, {
         direccionId:
           datos.tipoEntrega === "despacho" ? Number(datos.direccionId) : null,
+
         tipoEntrega: datos.tipoEntrega,
         metodoPago: datos.metodoPago,
         documento: datos.documento,
+
+        ...(datos.documento === "factura"
+          ? {
+              rutFacturacion: datosFacturacion.rutFacturacion.trim(),
+
+              razonSocialFacturacion:
+                datosFacturacion.razonSocialFacturacion.trim(),
+
+              giroFacturacion: datosFacturacion.giroFacturacion.trim(),
+
+              direccionFacturacion:
+                datosFacturacion.direccionFacturacion.trim(),
+
+              comunaFacturacion: datosFacturacion.comunaFacturacion.trim(),
+
+              ciudadFacturacion: datosFacturacion.ciudadFacturacion.trim(),
+            }
+          : {}),
       });
+
+      if (datos.metodoPago === "webpay") {
+        message.loading("Redirigiendo a Webpay...", 1.5);
+
+        const pago = await crearPagoWebpay(token, pedido.id);
+
+        redirigirAWebpay({
+          url: pago.url,
+          token: pago.token,
+        });
+
+        return;
+      }
+
+      if (datos.metodoPago === "oneclick") {
+        message.loading("Procesando pago con tarjeta guardada...", 1.5);
+
+        await crearPagoOneclick(
+          token,
+          pedido.id,
+          Number(medioPagoSeleccionadoId),
+        );
+
+        message.success("Pago aprobado correctamente");
+
+        navigate(`/compra-exitosa?pedidoId=${pedido.id}`, {
+          state: {
+            pedidoId: pedido.id,
+            numero: pedido.numero,
+          },
+        });
+
+        return;
+      }
 
       message.success("Compra generada correctamente");
 
@@ -242,6 +378,7 @@ function Checkout() {
       setProcesandoCompra(false);
     }
   };
+
   if (cargandoAuth || cargandoCheckout) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -348,13 +485,151 @@ function Checkout() {
                     onChange={(value) => actualizarCampo("documento", value)}
                     className="!h-12 !mt-2 w-full"
                     options={[
-                      { value: "boleta", label: "Boleta" },
-                      { value: "factura", label: "Factura" },
+                      {
+                        value: "boleta",
+                        label: "Comprobante de compra",
+                      },
+                      {
+                        value: "factura",
+                        label: "Factura proforma (no tributaria)",
+                      },
                     ]}
                   />
                 </div>
               </div>
             </div>
+
+            {/* Datos de facturación */}
+            {datos.documento === "factura" && (
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black text-gray-900">
+                    Datos de facturación
+                  </h2>
+
+                  <p className="text-sm text-gray-600 mt-1">
+                    Estos datos aparecerán en la factura proforma. Este
+                    documento no tiene validez tributaria ante el SII.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      RUT empresa
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: 76.123.456-7"
+                      value={datosFacturacion.rutFacturacion}
+                      onChange={(e) =>
+                        actualizarDatoFacturacion(
+                          "rutFacturacion",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Razón social
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: Empresa Tecnológica SpA"
+                      value={datosFacturacion.razonSocialFacturacion}
+                      onChange={(e) =>
+                        actualizarDatoFacturacion(
+                          "razonSocialFacturacion",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Giro
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: Venta de productos tecnológicos"
+                      value={datosFacturacion.giroFacturacion}
+                      onChange={(e) =>
+                        actualizarDatoFacturacion(
+                          "giroFacturacion",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Dirección comercial
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: Avenida Principal 1234"
+                      value={datosFacturacion.direccionFacturacion}
+                      onChange={(e) =>
+                        actualizarDatoFacturacion(
+                          "direccionFacturacion",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Comuna
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: Santiago"
+                      value={datosFacturacion.comunaFacturacion}
+                      onChange={(e) =>
+                        actualizarDatoFacturacion(
+                          "comunaFacturacion",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-bold text-gray-800">
+                      Ciudad
+                    </label>
+
+                    <Input
+                      size="large"
+                      placeholder="Ej: Santiago"
+                      value={datosFacturacion.ciudadFacturacion}
+                      onChange={(e) =>
+                        actualizarDatoFacturacion(
+                          "ciudadFacturacion",
+                          e.target.value,
+                        )
+                      }
+                      className="!h-12 !mt-2"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Método de entrega */}
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8">
@@ -462,6 +737,7 @@ function Checkout() {
                 className="w-full"
               >
                 <div className="space-y-4">
+                  {/* Transferencia */}
                   <label
                     className={`block border rounded-2xl p-5 cursor-pointer transition ${
                       datos.metodoPago === "transferencia"
@@ -480,6 +756,7 @@ function Checkout() {
                     </p>
                   </label>
 
+                  {/* Webpay */}
                   <label
                     className={`block border rounded-2xl p-5 cursor-pointer transition ${
                       datos.metodoPago === "webpay"
@@ -494,11 +771,70 @@ function Checkout() {
                     </Radio>
 
                     <p className="text-sm text-gray-600 mt-2 ml-6">
-                      Pago con tarjeta de débito o crédito. Integración
-                      pendiente.
+                      Pago con tarjeta de débito o crédito mediante Webpay.
                     </p>
                   </label>
 
+                  {/* Oneclick */}
+                  <label
+                    className={`block border rounded-2xl p-5 transition ${
+                      datos.metodoPago === "oneclick"
+                        ? "border-gray-950 bg-gray-50"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    } ${
+                      mediosPago.length === 0
+                        ? "opacity-60 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                  >
+                    <Radio value="oneclick" disabled={mediosPago.length === 0}>
+                      <span className="font-black text-gray-900">
+                        Tarjeta guardada / Oneclick
+                      </span>
+                    </Radio>
+
+                    <p className="text-sm text-gray-600 mt-2 ml-6">
+                      Paga con una tarjeta previamente inscrita en Transbank
+                      Oneclick.
+                    </p>
+
+                    {cargandoMediosPago && (
+                      <p className="text-xs text-gray-500 font-bold mt-2 ml-6">
+                        Cargando tarjetas guardadas...
+                      </p>
+                    )}
+
+                    {!cargandoMediosPago && mediosPago.length === 0 && (
+                      <p className="text-xs text-orange-600 font-bold mt-2 ml-6">
+                        No tienes tarjetas guardadas. Agrégala desde Mi cuenta →
+                        Medios de pago.
+                      </p>
+                    )}
+
+                    {datos.metodoPago === "oneclick" &&
+                      mediosPago.length > 0 && (
+                        <div className="mt-4 ml-6">
+                          <Select
+                            size="large"
+                            value={medioPagoSeleccionadoId || undefined}
+                            onChange={(value) =>
+                              setMedioPagoSeleccionadoId(String(value))
+                            }
+                            className="w-full"
+                            options={mediosPago.map((medio) => ({
+                              value: String(medio.id),
+                              label: `${medio.tipoTarjeta || "Tarjeta"}${
+                                medio.ultimos4
+                                  ? ` terminada en ${medio.ultimos4}`
+                                  : ""
+                              }`,
+                            }))}
+                          />
+                        </div>
+                      )}
+                  </label>
+
+                  {/* Mercado Pago */}
                   <label
                     className={`block border rounded-2xl p-5 cursor-pointer transition ${
                       datos.metodoPago === "mercadopago"
@@ -528,10 +864,10 @@ function Checkout() {
               <h2 className="text-2xl font-black text-gray-900 mb-5">
                 Resumen del pedido
               </h2>
-              {aplicaDescuentoNuevo && (
+              {tieneDescuentoBienvenida && (
                 <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
                   <p className="text-sm font-bold text-emerald-700">
-                    Tienes 10% de descuento por ser tu primera compra.
+                    Tienes 10% de descuento de bienvenida activo.
                   </p>
                 </div>
               )}
@@ -579,26 +915,14 @@ function Checkout() {
                   </span>
                 </div>
 
-                {resumen.descuentoProductos > 0 && (
+                {resumen.descuentoBienvenida > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="font-bold text-gray-700">
-                      Descuentos productos
+                      Descuento bienvenida 10%
                     </span>
 
                     <span className="font-bold text-emerald-600">
-                      -{formatearPrecio(resumen.descuentoProductos)}
-                    </span>
-                  </div>
-                )}
-
-                {aplicaDescuentoNuevo && resumen.descuentoNuevoUsuario > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="font-bold text-gray-700">
-                      Descuento primera compra 10%
-                    </span>
-
-                    <span className="font-bold text-emerald-600">
-                      -{formatearPrecio(resumen.descuentoNuevoUsuario)}
+                      -{formatearPrecio(resumen.descuentoBienvenida)}
                     </span>
                   </div>
                 )}
@@ -608,9 +932,11 @@ function Checkout() {
                   <span className="font-bold text-emerald-600">
                     {cargandoDespacho
                       ? "Calculando..."
-                      : resumen.despacho === 0
-                        ? "Gratis"
-                        : formatearPrecio(resumen.despacho)}
+                      : datos.tipoEntrega === "despacho" && !datos.direccionId
+                        ? "Pendiente"
+                        : resumen.despacho === 0
+                          ? "Gratis"
+                          : formatearPrecio(resumen.despacho)}
                   </span>
                   {despachoCalculado?.nombre && (
                     <p className="text-xs text-gray-500 text-right">
@@ -626,7 +952,13 @@ function Checkout() {
                 <div>
                   <p className="text-sm font-bold text-gray-600">Total</p>
 
-                  <p className="text-xs text-gray-500">IVA incluido</p>
+                  <p className="text-xs text-gray-500">
+                    Neto: {formatearPrecio(resumen.neto)}
+                  </p>
+
+                  <p className="text-xs text-gray-500">
+                    IVA incluido 19%: {formatearPrecio(resumen.iva)}
+                  </p>
                 </div>
 
                 <p className="text-3xl font-black text-gray-950">
@@ -649,8 +981,9 @@ function Checkout() {
                 <CheckCircleOutlined className="text-emerald-500 mt-1" />
 
                 <p>
-                  Esta es una simulación visual. El pago real se integrará más
-                  adelante con backend.
+                  Tu pedido se generará de forma segura. Si eliges un método de
+                  pago en línea, el pago será procesado mediante la pasarela
+                  correspondiente.
                 </p>
               </div>
             </div>

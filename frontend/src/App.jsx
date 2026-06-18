@@ -24,12 +24,14 @@ import AdminPedidos from "./pages/admin/AdminPedidos";
 import AdminDetallePedido from "./pages/admin/AdminDetallePedido";
 import AdminTarifas from "./pages/admin/AdminTarifas";
 import AdminCategorias from "./pages/admin/AdminCategorias";
-import AdminMarcas from "./pages/admin/AdminMarcas"
+import AdminMarcas from "./pages/admin/AdminMarcas";
 import AdminProductos from "./pages/admin/AdminProductos";
 import AdminAnuncios from "./pages/admin/AdminAnuncios";
 import AdminUsuarios from "./pages/admin/AdminUsuarios";
 import AuthCallback from "./pages/AuthCallback";
-
+import AdminSoporte from "./pages/admin/AdminSoporte";
+import AdminDetalleSoporte from "./pages/admin/AdminDetalleSoporte";
+import AdminProductosVendidos from "./pages/admin/AdminProductosVendidos";
 
 function App() {
   return (
@@ -70,6 +72,10 @@ function App() {
               </RutaAdmin>
             }
           >
+            <Route
+              path="productos-vendidos"
+              element={<AdminProductosVendidos />}
+            />
             <Route index element={<AdminDashboard />} />
             <Route path="pedidos" element={<AdminPedidos />} />
             <Route path="pedidos/:id" element={<AdminDetallePedido />} />
@@ -79,7 +85,8 @@ function App() {
             <Route path="productos" element={<AdminProductos />} />
             <Route path="anuncios" element={<AdminAnuncios />} />
             <Route path="usuarios" element={<AdminUsuarios />} />
-
+            <Route path="soporte" element={<AdminSoporte />} />
+            <Route path="soporte/:id" element={<AdminDetalleSoporte />} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -26,7 +26,23 @@ import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
 import adminAnuncioRoutes from "./routes/adminAnuncioRoutes.js";
 import adminUsuarioRoutes from "./routes/adminUsuarioRoutes.js";
 
+import newsletterRoutes from "./routes/newsletterRoutes.js";
+
+import pagoRoutes from "./routes/pagoRoutes.js";
+
+import medioPagoRoutes from "./routes/medioPagoRoutes.js";
+
 import authGoogleRoutes from "./routes/authGoogleRoutes.js";
+
+import documentoRoutes from "./routes/documentoRoutes.js";
+
+import { iniciarRevisionPedidosVencidos } from "./services/pedidoVencimientoService.js";
+
+import soporteRoutes from "./routes/soporteRoutes.js";
+
+import adminSoporteRoutes from "./routes/adminSoporteRoutes.js";
+
+import adminProductosVendidosRoutes from "./routes/adminProductosVendidosRoutes.js";
 
 const app = express();
 
@@ -55,7 +71,12 @@ app.use("/api/direcciones", direccionRoutes);
 app.use("/api/favoritos", favoritoRoutes);
 app.use("/api/carrito", carritoRoutes);
 app.use("/api/pedidos", pedidoRoutes);
+app.use("/api/pagos", pagoRoutes);
+app.use("/api/medios-pago", medioPagoRoutes);
 app.use("/api/despacho", despachoRoutes);
+app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/documentos", documentoRoutes);
+app.use("/api/soporte", soporteRoutes);
 
 app.use("/api/admin/pedidos", adminPedidoRoutes);
 app.use("/api/admin/tarifas", adminTarifaRoutes);
@@ -65,6 +86,8 @@ app.use("/api/admin/productos", adminProductoRoutes);
 app.use("/api/admin/anuncios", adminAnuncioRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/admin/usuarios", adminUsuarioRoutes);
+app.use("/api/admin/soporte", adminSoporteRoutes);
+app.use( "/api/admin/productos-vendidos",adminProductosVendidosRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend de Econnet funcionando correctamente");
@@ -107,5 +130,7 @@ app.use((error, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor ejecutándose en el puerto ${PORT}`);
+
+  iniciarRevisionPedidosVencidos();
 });

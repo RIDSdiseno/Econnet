@@ -577,3 +577,244 @@ export const actualizarUsuarioAdmin = async (token, usuarioId, payload) => {
 
   return data;
 };
+
+
+export const obtenerTicketsSoporteAdmin = async (
+  token,
+  filtros = {},
+) => {
+  const params = new URLSearchParams();
+
+  if (filtros.estado) {
+    params.append("estado", filtros.estado);
+  }
+
+  if (filtros.categoria) {
+    params.append("categoria", filtros.categoria);
+  }
+
+  if (filtros.busqueda) {
+    params.append("busqueda", filtros.busqueda);
+  }
+
+  params.append("pagina", String(filtros.pagina || 1));
+  params.append("limite", String(filtros.limite || 10));
+
+  const respuesta = await fetch(
+    `${API_URL}/admin/soporte?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje ||
+        "No se pudieron obtener las solicitudes de soporte",
+    );
+  }
+
+  return data;
+};
+
+export const obtenerTicketSoporteAdminPorId = async (
+  token,
+  id,
+) => {
+  const respuesta = await fetch(
+    `${API_URL}/admin/soporte/${id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudo obtener la solicitud",
+    );
+  }
+
+  return data;
+};
+
+export const responderTicketSoporteAdmin = async (
+  token,
+  id,
+  mensaje,
+) => {
+  const respuesta = await fetch(
+    `${API_URL}/admin/soporte/${id}/respuestas`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        mensaje,
+      }),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudo registrar la respuesta",
+    );
+  }
+
+  return data;
+};
+
+export const actualizarEstadoTicketSoporteAdmin = async (
+  token,
+  id,
+  estado,
+) => {
+  const respuesta = await fetch(
+    `${API_URL}/admin/soporte/${id}/estado`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        estado,
+      }),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje || "No se pudo actualizar el estado",
+    );
+  }
+
+  return data;
+};
+
+
+function construirParametrosProductosVendidos(filtros = {}) {
+  const params = new URLSearchParams();
+
+  if (filtros.busqueda?.trim()) {
+    params.append("busqueda", filtros.busqueda.trim());
+  }
+
+  if (filtros.estadoPedido) {
+    params.append("estadoPedido", filtros.estadoPedido);
+  }
+
+  if (filtros.estadoPago) {
+    params.append("estadoPago", filtros.estadoPago);
+  }
+
+  if (filtros.categoriaId) {
+    params.append("categoriaId", String(filtros.categoriaId));
+  }
+
+  if (filtros.marcaId) {
+    params.append("marcaId", String(filtros.marcaId));
+  }
+
+  if (filtros.fechaDesde) {
+    params.append("fechaDesde", filtros.fechaDesde);
+  }
+
+  if (filtros.fechaHasta) {
+    params.append("fechaHasta", filtros.fechaHasta);
+  }
+
+  params.append("pagina", String(filtros.pagina || 1));
+  params.append("limite", String(filtros.limite || 10));
+
+  return params;
+}
+
+export const obtenerProductosVendidosAdmin = async (
+  token,
+  filtros = {},
+) => {
+  const params = construirParametrosProductosVendidos(filtros);
+
+  const respuesta = await fetch(
+    `${API_URL}/admin/productos-vendidos?${params.toString()}`,
+    {
+      headers: obtenerHeaders(token),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje ||
+        "No se pudieron obtener los productos vendidos",
+    );
+  }
+
+  return data;
+};
+
+export const obtenerResumenProductosVendidosAdmin = async (
+  token,
+  filtros = {},
+) => {
+  const params = construirParametrosProductosVendidos(filtros);
+
+  if (filtros.ordenarPor) {
+    params.append("ordenarPor", filtros.ordenarPor);
+  }
+
+  const respuesta = await fetch(
+    `${API_URL}/admin/productos-vendidos/resumen?${params.toString()}`,
+    {
+      headers: obtenerHeaders(token),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje ||
+        "No se pudo obtener el resumen de productos vendidos",
+    );
+  }
+
+  return data;
+};
+
+export const obtenerFiltrosProductosVendidosAdmin = async (
+  token,
+) => {
+  const respuesta = await fetch(
+    `${API_URL}/admin/productos-vendidos/filtros`,
+    {
+      headers: obtenerHeaders(token),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(
+      data.mensaje ||
+        "No se pudieron obtener las opciones de los filtros",
+    );
+  }
+
+  return data;
+};

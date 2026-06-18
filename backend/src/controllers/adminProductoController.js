@@ -31,6 +31,30 @@ const convertirTextoNullable = (valor) => {
     return valor.trim();
 };
 
+const calcularPrecioProducto = ({
+    precio,
+    enOferta,
+    precioNormal,
+    descuento,
+    precioActual = 0,
+}) => {
+    const precioManual = convertirNumero(precio, precioActual);
+
+    if (!enOferta) {
+        return precioManual;
+    }
+
+    if (!precioNormal || precioNormal <= 0 || !descuento || descuento <= 0) {
+        return precioManual;
+    }
+
+    const precioConDescuento = Math.round(
+        precioNormal * (1 - descuento / 100)
+    );
+
+    return Math.max(precioConDescuento, 0);
+};
+
 
 const generarSlug = (texto) => {
     return texto
@@ -105,8 +129,18 @@ export const crearProductoAdmin = async (req, res) => {
             formatoOferta,
             ordenOferta,
         } = req.body;
+        const enOfertaConvertido = convertirBooleano(enOferta);
+        const precioNormalConvertido = convertirNumeroNullable(precioNormal);
+        const descuentoConvertido = convertirNumero(descuento, 0);
 
-        if (!nombre || !slug || !precio || !categoriaId) {
+        const precioCalculado = calcularPrecioProducto({
+            precio,
+            enOferta: enOfertaConvertido,
+            precioNormal: precioNormalConvertido,
+            descuento: descuentoConvertido,
+            
+        });
+        if (!nombre || !slug || !categoriaId || precioCalculado <= 0) {
             return res.status(400).json({
                 ok: false,
                 mensaje: "Nombre, slug, precio y categoría son obligatorios",
@@ -118,7 +152,7 @@ export const crearProductoAdmin = async (req, res) => {
                 nombre: nombre.trim(),
                 slug: slug.trim(),
                 descripcion: descripcion?.trim() || null,
-                precio: Number(precio),
+                precio: precioCalculado,
                 stock: convertirNumero(stock, 0),
                 sku: sku?.trim() || null,
                 modelo: modelo?.trim() || null,
@@ -130,9 +164,9 @@ export const crearProductoAdmin = async (req, res) => {
                 categoriaId: Number(categoriaId),
                 marcaId: marcaId ? Number(marcaId) : null,
 
-                enOferta: convertirBooleano(enOferta),
-                precioNormal: convertirNumeroNullable(precioNormal),
-                descuento: convertirNumero(descuento, 0),
+                enOferta: enOfertaConvertido,
+                precioNormal: precioNormalConvertido,
+                descuento: descuentoConvertido,
                 etiquetaOferta: convertirTextoNullable(etiquetaOferta),
                 etiquetaEnvio: convertirTextoNullable(etiquetaEnvio),
                 etiquetaDisponibilidad: convertirTextoNullable(etiquetaDisponibilidad),
@@ -222,6 +256,30 @@ export const actualizarProductoAdmin = async (req, res) => {
             });
         }
 
+
+        const enOfertaFinal =
+            enOferta !== undefined
+                ? convertirBooleano(enOferta)
+                : productoExiste.enOferta;
+
+        const precioNormalFinal =
+            precioNormal !== undefined
+                ? convertirNumeroNullable(precioNormal)
+                : productoExiste.precioNormal;
+
+        const descuentoFinal =
+            descuento !== undefined
+                ? convertirNumero(descuento, 0)
+                : productoExiste.descuento;
+
+        const precioFinal = calcularPrecioProducto({
+            precio: precio !== undefined ? precio : productoExiste.precio,
+            enOferta: enOfertaFinal,
+            precioNormal: precioNormalFinal,
+            descuento: descuentoFinal,
+            precioActual: productoExiste.precio,
+        });
+
         const producto = await prisma.producto.update({
             where: {
                 id: Number(id),
@@ -233,7 +291,7 @@ export const actualizarProductoAdmin = async (req, res) => {
                     descripcion !== undefined
                         ? descripcion?.trim() || null
                         : undefined,
-                precio: precio !== undefined ? Number(precio) : undefined,
+                precio: precioFinal,
                 stock: stock !== undefined ? convertirNumero(stock, 0) : undefined,
                 sku: sku !== undefined ? sku?.trim() || null : undefined,
                 modelo: modelo !== undefined ? modelo?.trim() || null : undefined,
@@ -259,18 +317,9 @@ export const actualizarProductoAdmin = async (req, res) => {
                             : null
                         : undefined,
 
-                enOferta:
-                    enOferta !== undefined
-                        ? convertirBooleano(enOferta)
-                        : undefined,
-                precioNormal:
-                    precioNormal !== undefined
-                        ? convertirNumeroNullable(precioNormal)
-                        : undefined,
-                descuento:
-                    descuento !== undefined
-                        ? convertirNumero(descuento, 0)
-                        : undefined,
+                enOferta: enOfertaFinal,
+                precioNormal: precioNormalFinal,
+                descuento: descuentoFinal,
                 etiquetaOferta:
                     etiquetaOferta !== undefined
                         ? convertirTextoNullable(etiquetaOferta)

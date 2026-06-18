@@ -725,7 +725,13 @@ function AdminProductos() {
                   min={0}
                   step={1000}
                   className="w-full"
-                  placeholder="Ej: 649990"
+                  placeholder="Ej: 189000"
+                  formatter={(value) =>
+                    value
+                      ? `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                      : ""
+                  }
+                  parser={(value) => value.replace(/\$\s?|(\.*)/g, "")}
                 />
               </Form.Item>
 

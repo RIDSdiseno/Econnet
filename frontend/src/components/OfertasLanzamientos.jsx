@@ -144,7 +144,7 @@ function OfertaSmall({ item }) {
             {formatearPrecio(item.precio)}
           </p>
 
-          <p className="text-xs text-blue-700">Transferencias</p>
+          
         </div>
       </div>
     </Link>

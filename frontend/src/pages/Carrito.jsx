@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button, message } from "antd";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Alert, Button, message } from "antd";
 import {
   MinusOutlined,
   PlusOutlined,
@@ -42,8 +42,8 @@ function adaptarItemCarrito(item) {
     categoria: producto.categoria?.nombre || "Sin categoría",
     imagen: imagenPrincipal,
     precio: producto.precio,
-    precioNormal: producto.precio,
-    descuento: 0,
+    precioNormal: producto.precioNormal || producto.precio,
+    descuento: producto.enOferta ? producto.descuento || 0 : 0,
     cantidad: item.cantidad,
     stock: producto.stock > 0 ? `${producto.stock} unidades` : "No disponible",
     stockNumero: producto.stock,
@@ -52,7 +52,8 @@ function adaptarItemCarrito(item) {
 
 function Carrito() {
   const navigate = useNavigate();
-  const { token, estaLogueado, cargandoAuth } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { token, usuario, estaLogueado, cargandoAuth } = useAuth();
 
   const [productosCarrito, setProductosCarrito] = useState([]);
   const [cargandoCarrito, setCargandoCarrito] = useState(true);
@@ -172,29 +173,71 @@ function Carrito() {
     }
   };
 
+  const errorPago = searchParams.get("error");
+
+  const avisoPago = useMemo(() => {
+    if (errorPago === "webpay_cancelado") {
+      return {
+        tipo: "warning",
+        titulo: "Pago cancelado",
+        descripcion:
+          "Anulaste el pago en Webpay. Tus productos siguen en el carrito para que puedas intentarlo nuevamente.",
+      };
+    }
+
+    if (errorPago === "pago_rechazado") {
+      return {
+        tipo: "error",
+        titulo: "Pago rechazado",
+        descripcion:
+          "Webpay rechazó el pago. El pedido fue cancelado, pero tus productos siguen en el carrito.",
+      };
+    }
+
+    if (errorPago === "webpay_error") {
+      return {
+        tipo: "error",
+        titulo: "No se pudo procesar el pago",
+        descripcion:
+          "Ocurrió un problema al volver desde Webpay. Puedes revisar tu carrito e intentarlo nuevamente.",
+      };
+    }
+
+    return null;
+  }, [errorPago]);
+
+  const tieneDescuentoBienvenida =
+    usuario?.descuentoBienvenidaDisponible === true &&
+    usuario?.descuentoBienvenidaUsado === false;
+
   const resumen = useMemo(() => {
     const subtotal = productosCarrito.reduce(
-      (total, producto) => total + producto.precioNormal * producto.cantidad,
-      0,
-    );
-
-    const totalProductos = productosCarrito.reduce(
       (total, producto) => total + producto.precio * producto.cantidad,
       0,
     );
 
-    const descuento = subtotal - totalProductos;
+    const descuentoBienvenida = tieneDescuentoBienvenida
+      ? Math.round(subtotal * 0.1)
+      : 0;
+
+    const total = subtotal - descuentoBienvenida;
+
+    const neto = Math.round(total / 1.19);
+    const iva = total - neto;
 
     return {
       subtotal,
-      descuento,
-      total: totalProductos,
+      descuentoBienvenida,
+      descuento: descuentoBienvenida,
+      neto,
+      iva,
+      total,
       cantidadProductos: productosCarrito.reduce(
         (total, producto) => total + producto.cantidad,
         0,
       ),
     };
-  }, [productosCarrito]);
+  }, [productosCarrito, tieneDescuentoBienvenida]);
 
   if (cargandoAuth || cargandoCarrito) {
     return (
@@ -257,6 +300,18 @@ function Carrito() {
                 </p>
               </div>
             </div>
+
+            {tieneDescuentoBienvenida && (
+              <Alert
+                type="success"
+                message="Descuento de bienvenida activo"
+                description={`Se aplicará un 10% de descuento en tu primera compra: -${formatearPrecio(
+                  resumen.descuentoBienvenida,
+                )}.`}
+                showIcon
+                className="!mb-6 !rounded-2xl"
+              />
+            )}
 
             {/* Aviso */}
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4 mb-6 flex items-center gap-3">
@@ -324,15 +379,18 @@ function Carrito() {
                           Categoría: {producto.categoria}
                         </p>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <span className="text-[11px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
-                            {producto.descuento}% DCTO.
-                          </span>
+                        {producto.descuento > 0 &&
+                          producto.precioNormal > producto.precio && (
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <span className="text-[11px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
+                                {producto.descuento}% DCTO.
+                              </span>
 
-                          <span className="text-xs text-gray-400 line-through">
-                            {formatearPrecio(producto.precioNormal)}
-                          </span>
-                        </div>
+                              <span className="text-xs text-gray-400 line-through">
+                                {formatearPrecio(producto.precioNormal)}
+                              </span>
+                            </div>
+                          )}
 
                         <p className="text-sm text-emerald-600 font-bold mt-2">
                           Stock: {producto.stock}
@@ -413,7 +471,6 @@ function Carrito() {
               <h2 className="text-2xl font-black text-gray-900 mb-5">
                 Resumen de la compra
               </h2>
-
               <div className="space-y-4 border-b border-gray-200 pb-5">
                 <div className="flex justify-between text-sm">
                   <span className="font-bold text-gray-700">
@@ -425,13 +482,17 @@ function Carrito() {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm">
-                  <span className="font-bold text-gray-700">Descuentos</span>
+                {resumen.descuentoBienvenida > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold text-gray-700">
+                      Descuento bienvenida 10%
+                    </span>
 
-                  <span className="font-bold text-emerald-600">
-                    -{formatearPrecio(resumen.descuento)}
-                  </span>
-                </div>
+                    <span className="font-bold text-emerald-600">
+                      -{formatearPrecio(resumen.descuentoBienvenida)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-sm">
                   <span className="font-bold text-gray-700">Despacho</span>
@@ -444,7 +505,13 @@ function Carrito() {
                 <div>
                   <p className="text-sm font-bold text-gray-600">Total</p>
 
-                  <p className="text-xs text-gray-500">IVA incluido</p>
+                  <p className="text-xs text-gray-500">
+                    Neto: {formatearPrecio(resumen.neto)}
+                  </p>
+
+                  <p className="text-xs text-gray-500">
+                    IVA incluido 19%: {formatearPrecio(resumen.iva)}
+                  </p>
                 </div>
 
                 <p className="text-3xl font-black text-gray-950">

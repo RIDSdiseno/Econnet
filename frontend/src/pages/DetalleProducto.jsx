@@ -575,7 +575,7 @@ function DetalleProducto() {
 
                 <div className="flex justify-between items-end gap-4 border-t border-gray-200 pt-4">
                   <span className="text-sm font-bold text-gray-900">
-                    Pago transferencia
+                    Total
                   </span>
 
                   <span className="text-2xl font-black text-gray-950">
@@ -583,10 +583,7 @@ function DetalleProducto() {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Otros medios</span>
-                  <span>{formatearPrecio(otrosMedios)}</span>
-                </div>
+                
               </div>
 
               <div className="mt-6 flex flex-col gap-4">

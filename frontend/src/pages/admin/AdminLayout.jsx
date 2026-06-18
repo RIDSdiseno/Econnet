@@ -8,6 +8,8 @@ import {
   UserOutlined,
   PictureOutlined,
   HomeOutlined,
+  CustomerServiceOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
@@ -27,6 +29,11 @@ function AdminLayout() {
       key: "/admin/pedidos",
       icon: <ShoppingCartOutlined />,
       label: "Pedidos",
+    },
+    {
+      key: "/admin/productos-vendidos",
+      icon: <BarChartOutlined />,
+      label: "Productos vendidos",
     },
     {
       key: "/admin/productos",
@@ -59,11 +66,32 @@ function AdminLayout() {
       label: "Usuarios",
     },
     {
+      key: "/admin/soporte",
+      icon: <CustomerServiceOutlined />,
+      label: "Soporte",
+    },
+    {
       key: "/",
       icon: <HomeOutlined />,
       label: "Volver a tienda",
     },
   ];
+
+  const obtenerMenuSeleccionado = () => {
+    if (location.pathname.startsWith("/admin/productos-vendidos")) {
+      return "/admin/productos-vendidos";
+    }
+
+    if (location.pathname.startsWith("/admin/pedidos")) {
+      return "/admin/pedidos";
+    }
+
+    if (location.pathname.startsWith("/admin/soporte")) {
+      return "/admin/soporte";
+    }
+
+    return location.pathname;
+  };
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -83,7 +111,7 @@ function AdminLayout() {
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[obtenerMenuSeleccionado()]}
           items={menuItems}
           onClick={(item) => navigate(item.key)}
           style={{
@@ -93,8 +121,8 @@ function AdminLayout() {
       </Sider>
 
       <Layout style={{ minHeight: "100vh" }}>
-        <Header className="bg-white shadow-sm flex items-center px-6">
-          <h2 className="text-xl font-semibold text-gray-800">
+        <Header className="!bg-white shadow-sm flex items-center px-6">
+          <h2 className="text-xl font-bold text-gray-900 m-0">
             Panel de administración
           </h2>
         </Header>

@@ -5,18 +5,18 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { Button, Result, message } from "antd";
+import { Alert, Button, Result, Tag, message } from "antd";
 import {
   CheckCircleOutlined,
   ShoppingOutlined,
-  HomeOutlined,
   FileTextOutlined,
   TruckOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
-import { obtenerPedidoPorId } from "../services/api";
+import { obtenerPedidoPorId, descargarDocumentoPedido } from "../services/api";
 
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
@@ -26,14 +26,89 @@ function formatearPrecio(valor) {
   }).format(valor || 0);
 }
 
+function formatearFecha(fecha) {
+  if (!fecha) return "No registrada";
+
+  return new Date(fecha).toLocaleString("es-CL", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function formatearMetodoPago(metodo) {
   const metodos = {
     transferencia: "Transferencia bancaria",
     webpay: "Webpay / Tarjeta",
+    oneclick: "Tarjeta guardada / Oneclick",
     mercadopago: "Mercado Pago",
   };
 
   return metodos[metodo] || metodo || "No informado";
+}
+
+function formatearEstadoPago(estadoPago) {
+  const estados = {
+    pendiente: "Pendiente",
+    aprobado: "Aprobado",
+    rechazado: "Rechazado",
+    cancelado: "Cancelado",
+  };
+
+  return estados[estadoPago] || "Pendiente";
+}
+
+function obtenerColorEstadoPago(estadoPago) {
+  const colores = {
+    pendiente: "orange",
+    aprobado: "green",
+    rechazado: "red",
+    cancelado: "volcano",
+  };
+
+  return colores[estadoPago] || "orange";
+}
+
+function obtenerAvisoPago(pedido) {
+  if (pedido.metodoPago === "webpay" && pedido.estadoPago === "aprobado") {
+    return {
+      tipo: "success",
+      titulo: "Pago aprobado correctamente",
+      descripcion:
+        "Tu pago fue confirmado por Webpay. Pronto comenzaremos a preparar tu pedido.",
+    };
+  }
+
+  if (pedido.metodoPago === "oneclick" && pedido.estadoPago === "aprobado") {
+    return {
+      tipo: "success",
+      titulo: "Pago aprobado correctamente",
+      descripcion:
+        "Tu pago fue confirmado con tu tarjeta guardada en Transbank Oneclick. Pronto comenzaremos a preparar tu pedido.",
+    };
+  }
+
+  if (pedido.metodoPago === "transferencia") {
+    return {
+      tipo: "info",
+      titulo: "Pedido generado, pago pendiente",
+      descripcion:
+        "Tu pedido fue recibido correctamente. Recuerda realizar la transferencia bancaria para que podamos confirmar el pago.",
+    };
+  }
+
+  if (pedido.estadoPago === "pendiente") {
+    return {
+      tipo: "warning",
+      titulo: "Pago pendiente",
+      descripcion:
+        "Tu pedido fue generado, pero el pago todavía no ha sido confirmado.",
+    };
+  }
+
+  return null;
 }
 
 function formatearTipoEntrega(tipo) {
@@ -50,9 +125,11 @@ function CompraExitosa() {
 
   const pedidoId =
     searchParams.get("pedidoId") || location.state?.pedidoId || null;
+  const ordenWebpay = searchParams.get("orden");
 
   const [pedido, setPedido] = useState(null);
   const [cargandoPedido, setCargandoPedido] = useState(true);
+  const [descargandoDocumento, setDescargandoDocumento] = useState(false);
 
   useEffect(() => {
     const cargarPedido = async () => {
@@ -83,6 +160,47 @@ function CompraExitosa() {
 
     cargarPedido();
   }, [pedidoId, token, estaLogueado, cargandoAuth, navigate]);
+
+  const handleDescargarDocumento = async () => {
+    if (!pedido?.id) {
+      message.warning("No se encontró el pedido");
+      return;
+    }
+
+    try {
+      setDescargandoDocumento(true);
+
+      const { blob } = await descargarDocumentoPedido(token, pedido.id);
+
+      const tipoDocumento =
+        pedido.documento === "factura" ? "Factura-Proforma" : "Boleta";
+
+      const numeroPedido = String(pedido.numero || pedido.id).replace(
+        /[^a-zA-Z0-9-_]/g,
+        "_",
+      );
+
+      const nombreArchivo = `${tipoDocumento}-${numeroPedido}.pdf`;
+
+      const urlTemporal = window.URL.createObjectURL(blob);
+
+      const enlace = document.createElement("a");
+      enlace.href = urlTemporal;
+      enlace.download = nombreArchivo;
+
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+
+      window.URL.revokeObjectURL(urlTemporal);
+
+      message.success("Documento descargado correctamente");
+    } catch (error) {
+      message.error(error.message || "No se pudo descargar el documento");
+    } finally {
+      setDescargandoDocumento(false);
+    }
+  };
 
   if (cargandoAuth || cargandoPedido) {
     return (
@@ -134,6 +252,8 @@ function CompraExitosa() {
     );
   }
 
+  const avisoPago = obtenerAvisoPago(pedido);
+
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       <Navbar />
@@ -162,16 +282,34 @@ function CompraExitosa() {
           <div className="p-8 md:p-10">
             <Result
               status="success"
-              title="Tu pedido fue generado con éxito"
+              title={
+                pedido.estadoPago === "aprobado"
+                  ? "Tu pago fue aprobado con éxito"
+                  : "Tu pedido fue generado con éxito"
+              }
               subTitle={`Número de pedido: ${pedido.numero}`}
               extra={null}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
+            {avisoPago && (
+              <Alert
+                type={avisoPago.tipo}
+                message={avisoPago.titulo}
+                description={avisoPago.descripcion}
+                showIcon
+                className="!mb-6 !rounded-2xl"
+              />
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mt-4">
               <div className="bg-gray-100 rounded-2xl p-5 text-center">
                 <FileTextOutlined className="text-3xl text-gray-900 mb-3" />
 
-                <h3 className="font-black text-gray-900">Total pagado</h3>
+                <h3 className="font-black text-gray-900">
+                  {pedido.estadoPago === "aprobado"
+                    ? "Total pagado"
+                    : "Total del pedido"}
+                </h3>
 
                 <p className="text-sm text-gray-600 mt-2">
                   {formatearPrecio(pedido.total)}
@@ -187,7 +325,17 @@ function CompraExitosa() {
                   {formatearMetodoPago(pedido.metodoPago)}
                 </p>
               </div>
+              <div className="bg-gray-100 rounded-2xl p-5 text-center">
+                <CheckCircleOutlined className="text-3xl text-gray-900 mb-3" />
 
+                <h3 className="font-black text-gray-900">Estado pago</h3>
+
+                <div className="mt-2">
+                  <Tag color={obtenerColorEstadoPago(pedido.estadoPago)}>
+                    {formatearEstadoPago(pedido.estadoPago).toUpperCase()}
+                  </Tag>
+                </div>
+              </div>
               <div className="bg-gray-100 rounded-2xl p-5 text-center">
                 <TruckOutlined className="text-3xl text-gray-900 mb-3" />
 
@@ -230,11 +378,29 @@ function CompraExitosa() {
                   </span>
                 </div>
 
-                <div className="border-t border-gray-200 pt-3 flex justify-between">
-                  <span className="font-black text-gray-900">Total</span>
-                  <span className="font-black text-gray-950">
-                    {formatearPrecio(pedido.total)}
-                  </span>
+                <div className="border-t border-gray-200 pt-3 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-700">Neto</span>
+                    <span className="font-black text-gray-700">
+                      {formatearPrecio(pedido.neto)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-700">
+                      IVA incluido 19%
+                    </span>
+                    <span className="font-black text-gray-700">
+                      {formatearPrecio(pedido.iva)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <span className="font-black text-gray-900">Total</span>
+                    <span className="font-black text-gray-950">
+                      {formatearPrecio(pedido.total)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -249,9 +415,52 @@ function CompraExitosa() {
                       }, ${pedido.region || ""}`}
                 </p>
               </div>
+
+              {["webpay", "oneclick"].includes(pedido.metodoPago) && (
+                <div className="mt-5 border-t border-gray-200 pt-5">
+                  <p className="font-bold text-gray-700">
+                    {pedido.metodoPago === "oneclick"
+                      ? "Información Oneclick"
+                      : "Información Webpay"}
+                  </p>
+
+                  <div className="text-sm text-gray-600 mt-2 space-y-1">
+                    <p>
+                      <span className="font-bold">Orden: </span>
+                      {pedido.ordenCompraPago || ordenWebpay || "No registrada"}
+                    </p>
+
+                    <p>
+                      <span className="font-bold">Código autorización: </span>
+                      {pedido.codigoAutorizacion || "No registrado"}
+                    </p>
+
+                    <p>
+                      <span className="font-bold">Fecha de pago: </span>
+                      {pedido.fechaPago
+                        ? formatearFecha(pedido.fechaPago)
+                        : "No registrada"}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+              {pedido.estadoPago === "aprobado" && (
+                <Button
+                  size="large"
+                  icon={<DownloadOutlined />}
+                  loading={descargandoDocumento}
+                  onClick={handleDescargarDocumento}
+                  className="!h-12 !rounded-2xl !font-bold !px-8"
+                >
+                  {pedido.documento === "factura"
+                    ? "Descargar factura proforma"
+                    : "Descargar comprobante"}
+                </Button>
+              )}
+
               <Link to={`/seguimiento-compra?pedidoId=${pedido.id}`}>
                 <Button
                   size="large"
