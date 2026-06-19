@@ -117,6 +117,100 @@ function crearResumenRespuestaPago(response) {
     };
 }
 
+function normalizarIdMercadoPago(valor) {
+    const id = String(valor ?? "").trim();
+
+    if (!id || id === "null" || id === "undefined") {
+        return null;
+    }
+
+    return id;
+}
+
+function obtenerPaymentIdDesdeQuery(query) {
+    return (
+        normalizarIdMercadoPago(query?.payment_id) ||
+        normalizarIdMercadoPago(query?.collection_id)
+    );
+}
+
+async function obtenerMerchantOrderMercadoPago({ id, resource }) {
+    const url = resource || `https://api.mercadolibre.com/merchant_orders/${id}`;
+
+    const respuesta = await fetch(url, {
+        headers: {
+            Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+        },
+    });
+
+    const data = await respuesta.json();
+
+    if (!respuesta.ok) {
+        throw new Error(
+            data.message ||
+                data.error ||
+                "No se pudo obtener la merchant order de Mercado Pago",
+        );
+    }
+
+    return data;
+}
+
+async function procesarMerchantOrderMercadoPago({ id, resource }) {
+    const merchantOrderId = normalizarIdMercadoPago(id);
+
+    if (!merchantOrderId && !resource) {
+        return {
+            pedidoId: null,
+            pagoId: null,
+            estado: "pendiente",
+            confirmado: false,
+            mensaje: "Merchant order sin ID",
+        };
+    }
+
+    const merchantOrder = await obtenerMerchantOrderMercadoPago({
+        id: merchantOrderId,
+        resource,
+    });
+
+    const pagos = Array.isArray(merchantOrder.payments)
+        ? merchantOrder.payments
+        : [];
+
+    if (pagos.length === 0) {
+        return {
+            pedidoId: null,
+            pagoId: null,
+            estado: "pendiente",
+            confirmado: false,
+            merchantOrderId: merchantOrder.id || merchantOrderId,
+            mensaje: "Merchant order sin pagos asociados",
+        };
+    }
+
+    const pagoAprobado = pagos.find(
+        (pago) => pago.status === "approved" && pago.id,
+    );
+
+    const pagoConId =
+        pagoAprobado ||
+        pagos.find((pago) => pago.id);
+
+    if (!pagoConId?.id) {
+        return {
+            pedidoId: null,
+            pagoId: null,
+            estado: "pendiente",
+            confirmado: false,
+            merchantOrderId: merchantOrder.id || merchantOrderId,
+            mensaje: "No se encontró un payment id en la merchant order",
+        };
+    }
+
+    return procesarPagoMercadoPagoPorId(pagoConId.id);
+}
+
 export async function procesarPagoMercadoPagoPorId(
     paymentId,
 ) {
@@ -810,20 +904,29 @@ export async function retornoMercadoPago(req, res) {
 
     console.log("RETORNO MERCADO PAGO QUERY:", req.query);
 
-    const paymentId =
-        req.query?.payment_id ||
-        req.query?.collection_id;
+    const paymentId = obtenerPaymentIdDesdeQuery(req.query);
+
+    const merchantOrderId =
+        normalizarIdMercadoPago(req.query?.merchant_order_id) ||
+        normalizarIdMercadoPago(req.query?.merchant_order);
 
     try {
-        if (!paymentId) {
+        let resultado = null;
+
+        if (paymentId) {
+            resultado = await procesarPagoMercadoPagoPorId(paymentId);
+        } else if (merchantOrderId) {
+            resultado = await procesarMerchantOrderMercadoPago({
+                id: merchantOrderId,
+            });
+        } else {
             return res.redirect(
                 `${frontendUrl}/mi-cuenta` +
-                "?seccion=pedidos&info=mercadopago_sin_payment_id",
+                    "?seccion=pedidos&info=mercadopago_sin_payment_id",
             );
         }
 
-        const resultado =
-            await procesarPagoMercadoPagoPorId(paymentId);
+        console.log("RESULTADO RETORNO MERCADO PAGO:", resultado);
 
         if (
             resultado.estado === "aprobado" &&
@@ -831,39 +934,36 @@ export async function retornoMercadoPago(req, res) {
         ) {
             return res.redirect(
                 `${frontendUrl}/compra-exitosa` +
-                `?pedidoId=${resultado.pedidoId}` +
-                `&metodo=mercadopago`,
+                    `?pedidoId=${resultado.pedidoId}` +
+                    `&metodo=mercadopago`,
             );
         }
 
         if (resultado.estado === "revision_manual") {
             return res.redirect(
                 `${frontendUrl}/mi-cuenta` +
-                "?seccion=pedidos" +
-                `&pedidoId=${resultado.pedidoId}` +
-                "&error=pago_aprobado_revision",
+                    "?seccion=pedidos" +
+                    `&pedidoId=${resultado.pedidoId}` +
+                    "&error=pago_aprobado_revision",
             );
         }
 
         if (resultado.estado === "pendiente") {
             return res.redirect(
                 `${frontendUrl}/mi-cuenta` +
-                "?seccion=pedidos" +
-                `&pedidoId=${resultado.pedidoId}` +
-                "&info=pago_pendiente",
+                    "?seccion=pedidos" +
+                    `${resultado.pedidoId ? `&pedidoId=${resultado.pedidoId}` : ""}` +
+                    "&info=pago_pendiente",
             );
         }
 
         return res.redirect(
             `${frontendUrl}/carrito` +
-            `?pedidoId=${resultado.pedidoId}` +
-            `&error=mercadopago_${resultado.estado}`,
+                `${resultado.pedidoId ? `?pedidoId=${resultado.pedidoId}` : "?"}` +
+                `&error=mercadopago_${resultado.estado}`,
         );
     } catch (error) {
-        console.error(
-            "Error en retorno de Mercado Pago:",
-            error,
-        );
+        console.error("Error en retorno de Mercado Pago:", error);
 
         return res.redirect(
             `${frontendUrl}/carrito?error=mercadopago_error`,
@@ -882,42 +982,51 @@ export async function webhookMercadoPago(req, res) {
             req.query?.type ||
             req.query?.topic;
 
-        const paymentId =
-            req.body?.data?.id ||
-            req.query?.id ||
-            req.query?.["data.id"];
+        if (tipo === "payment") {
+            const paymentId =
+                normalizarIdMercadoPago(req.body?.data?.id) ||
+                normalizarIdMercadoPago(req.query?.id) ||
+                normalizarIdMercadoPago(req.query?.["data.id"]);
 
-        /*
-         * Mercado Pago puede enviar distintos eventos.
-         * Para confirmar pedidos solo necesitamos eventos de pago.
-         */
-        if (tipo && tipo !== "payment") {
+            if (!paymentId) {
+                return res.status(200).json({
+                    ok: true,
+                    mensaje: "Webhook payment sin paymentId",
+                });
+            }
+
+            const resultado =
+                await procesarPagoMercadoPagoPorId(paymentId);
+
+            console.log("RESULTADO WEBHOOK PAYMENT:", resultado);
+
             return res.status(200).json({
                 ok: true,
-                mensaje: "Notificación ignorada",
+                mensaje: "Webhook payment procesado",
+                data: resultado,
             });
         }
 
-        if (!paymentId) {
+        if (tipo === "merchant_order") {
+            const resultado =
+                await procesarMerchantOrderMercadoPago({
+                    id: req.query?.id,
+                    resource: req.body?.resource,
+                });
+
+            console.log("RESULTADO WEBHOOK MERCHANT ORDER:", resultado);
+
             return res.status(200).json({
                 ok: true,
-                mensaje: "Notificación sin paymentId",
+                mensaje: "Webhook merchant_order procesado",
+                data: resultado,
             });
         }
-
-        const resultado = await procesarPagoMercadoPagoPorId(paymentId);
-
-        console.log("RESULTADO WEBHOOK MERCADO PAGO:", resultado);
 
         return res.status(200).json({
             ok: true,
-            mensaje: "Webhook de Mercado Pago procesado",
-            data: {
-                pedidoId: resultado.pedidoId,
-                pagoId: resultado.pagoId,
-                estado: resultado.estado,
-                confirmado: resultado.confirmado,
-            },
+            mensaje: "Notificación ignorada",
+            tipo,
         });
     } catch (error) {
         console.error("Error en webhook de Mercado Pago:", error);
