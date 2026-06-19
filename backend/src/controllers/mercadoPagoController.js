@@ -808,6 +808,8 @@ export async function crearPagoMercadoPago(req, res) {
 export async function retornoMercadoPago(req, res) {
     const frontendUrl = obtenerFrontendUrl();
 
+    console.log("RETORNO MERCADO PAGO QUERY:", req.query);
+
     const paymentId =
         req.query?.payment_id ||
         req.query?.collection_id;
