@@ -870,3 +870,61 @@ export async function retornoMercadoPago(req, res) {
         );
     }
 }
+
+export async function webhookMercadoPago(req, res) {
+    try {
+        console.log("WEBHOOK MERCADO PAGO BODY:", req.body);
+        console.log("WEBHOOK MERCADO PAGO QUERY:", req.query);
+
+        const tipo =
+            req.body?.type ||
+            req.body?.topic ||
+            req.query?.type ||
+            req.query?.topic;
+
+        const paymentId =
+            req.body?.data?.id ||
+            req.query?.id ||
+            req.query?.["data.id"];
+
+        /*
+         * Mercado Pago puede enviar distintos eventos.
+         * Para confirmar pedidos solo necesitamos eventos de pago.
+         */
+        if (tipo && tipo !== "payment") {
+            return res.status(200).json({
+                ok: true,
+                mensaje: "Notificación ignorada",
+            });
+        }
+
+        if (!paymentId) {
+            return res.status(200).json({
+                ok: true,
+                mensaje: "Notificación sin paymentId",
+            });
+        }
+
+        const resultado = await procesarPagoMercadoPagoPorId(paymentId);
+
+        console.log("RESULTADO WEBHOOK MERCADO PAGO:", resultado);
+
+        return res.status(200).json({
+            ok: true,
+            mensaje: "Webhook de Mercado Pago procesado",
+            data: {
+                pedidoId: resultado.pedidoId,
+                pagoId: resultado.pagoId,
+                estado: resultado.estado,
+                confirmado: resultado.confirmado,
+            },
+        });
+    } catch (error) {
+        console.error("Error en webhook de Mercado Pago:", error);
+
+        return res.status(500).json({
+            ok: false,
+            mensaje: "No se pudo procesar el webhook de Mercado Pago",
+        });
+    }
+}
