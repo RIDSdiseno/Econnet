@@ -405,6 +405,34 @@ function Checkout() {
     form.submit();
   };
 
+  const obtenerPayloadMercadoPago = (respuesta) => {
+  if (!respuesta) return {};
+
+  if (respuesta.data?.data) {
+    return respuesta.data.data;
+  }
+
+  if (respuesta.data) {
+    return respuesta.data;
+  }
+
+  return respuesta;
+};
+
+const obtenerUrlPagoMercadoPago = (respuesta) => {
+  const payload = obtenerPayloadMercadoPago(respuesta);
+
+  return (
+    payload.urlPago ||
+    payload.url ||
+    payload.initPoint ||
+    payload.init_point ||
+    payload.sandboxInitPoint ||
+    payload.sandbox_init_point ||
+    null
+  );
+};
+
   const finalizarCompra = async () => {
     if (productosCheckout.length === 0) {
       message.warning("Tu carrito está vacío");
@@ -558,15 +586,9 @@ function Checkout() {
       if (datos.metodoPago === "mercadopago") {
         message.loading("Redirigiendo a Mercado Pago...", 1.5);
 
-        const pago = await crearPagoMercadoPago(token, pedido.id);
+        const respuestaPago = await crearPagoMercadoPago(token, pedido.id);
 
-        const urlPago =
-          pago.urlPago ||
-          pago.url ||
-          pago.initPoint ||
-          pago.init_point ||
-          pago.sandboxInitPoint ||
-          pago.sandbox_init_point;
+        const urlPago = obtenerUrlPagoMercadoPago(respuestaPago);
 
         if (!urlPago) {
           throw new Error("Mercado Pago no devolvió una URL de pago");
@@ -576,7 +598,7 @@ function Checkout() {
           vaciarCarritoInvitado();
         }
 
-        window.location.href = urlPago;
+        window.location.assign(urlPago);
 
         return;
       }
@@ -1206,7 +1228,7 @@ function Checkout() {
                     </Radio>
 
                     <p className="text-sm text-gray-600 mt-2 ml-6">
-                      Opción preparada para futura integración.
+                      Paga de forma segura con Mercado Pago.
                     </p>
                   </label>
                 </div>
@@ -1336,7 +1358,13 @@ function Checkout() {
                 onClick={finalizarCompra}
                 className="!h-14 !mt-6 !rounded-2xl !bg-gray-950 !text-white !border-gray-950 !font-black hover:!bg-black disabled:!bg-gray-300"
               >
-                Finalizar compra
+                {datos.metodoPago === "mercadopago"
+                  ? "Pagar con Mercado Pago"
+                  : datos.metodoPago === "webpay"
+                    ? "Pagar con Webpay"
+                    : datos.metodoPago === "oneclick"
+                      ? "Pagar con tarjeta guardada"
+                      : "Finalizar compra"}
               </Button>
 
               <div className="mt-5 flex gap-2 text-sm text-gray-600">
