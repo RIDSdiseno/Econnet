@@ -10,8 +10,12 @@ import { obtenerInfoEstadoPedido } from "../utils/estadosPedido.js";
 import { enviarDocumentoPedidoPorCorreo } from "../services/emailService.js";
 
 function obtenerBackendUrl() {
-    return process.env.MERCADOPAGO_BACKEND_URL
-        ?.trim()
+    return (
+        process.env.MERCADOPAGO_BACKEND_URL ||
+        process.env.BACKEND_URL ||
+        ""
+    )
+        .trim()
         .replace(/\/+$/, "");
 }
 
@@ -611,7 +615,7 @@ export async function crearPagoMercadoPago(req, res) {
             });
         }
 
-        const usuarioAutenticado = req.usuario || null;
+
 
         /*
          * Usuario logueado:
@@ -620,6 +624,8 @@ export async function crearPagoMercadoPago(req, res) {
          * Invitado:
          *   solo puede pagar pedidos sin usuario asociado.
          */
+        const usuarioAutenticado = req.usuario || null;
+
         const pedido = await prisma.pedido.findFirst({
             where: {
                 id: Number(pedidoId),
