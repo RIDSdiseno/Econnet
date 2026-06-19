@@ -148,8 +148,8 @@ async function obtenerMerchantOrderMercadoPago({ id, resource }) {
     if (!respuesta.ok) {
         throw new Error(
             data.message ||
-                data.error ||
-                "No se pudo obtener la merchant order de Mercado Pago",
+            data.error ||
+            "No se pudo obtener la merchant order de Mercado Pago",
         );
     }
 
@@ -765,6 +765,15 @@ export async function crearPagoMercadoPago(req, res) {
                 numero_pedido: pedido.numero,
             },
 
+            payment_methods: {
+                excluded_payment_types: [
+                    { id: "ticket" },
+                    { id: "atm" },
+                    { id: "bank_transfer" },
+                ],
+                installments: 1,
+            },
+
             expires: Boolean(pedido.fechaVencimientoPago),
 
             ...(pedido.fechaVencimientoPago
@@ -922,7 +931,7 @@ export async function retornoMercadoPago(req, res) {
         } else {
             return res.redirect(
                 `${frontendUrl}/mi-cuenta` +
-                    "?seccion=pedidos&info=mercadopago_sin_payment_id",
+                "?seccion=pedidos&info=mercadopago_sin_payment_id",
             );
         }
 
@@ -934,33 +943,33 @@ export async function retornoMercadoPago(req, res) {
         ) {
             return res.redirect(
                 `${frontendUrl}/compra-exitosa` +
-                    `?pedidoId=${resultado.pedidoId}` +
-                    `&metodo=mercadopago`,
+                `?pedidoId=${resultado.pedidoId}` +
+                `&metodo=mercadopago`,
             );
         }
 
         if (resultado.estado === "revision_manual") {
             return res.redirect(
                 `${frontendUrl}/mi-cuenta` +
-                    "?seccion=pedidos" +
-                    `&pedidoId=${resultado.pedidoId}` +
-                    "&error=pago_aprobado_revision",
+                "?seccion=pedidos" +
+                `&pedidoId=${resultado.pedidoId}` +
+                "&error=pago_aprobado_revision",
             );
         }
 
         if (resultado.estado === "pendiente") {
             return res.redirect(
                 `${frontendUrl}/mi-cuenta` +
-                    "?seccion=pedidos" +
-                    `${resultado.pedidoId ? `&pedidoId=${resultado.pedidoId}` : ""}` +
-                    "&info=pago_pendiente",
+                "?seccion=pedidos" +
+                `${resultado.pedidoId ? `&pedidoId=${resultado.pedidoId}` : ""}` +
+                "&info=pago_pendiente",
             );
         }
 
         return res.redirect(
             `${frontendUrl}/carrito` +
-                `${resultado.pedidoId ? `?pedidoId=${resultado.pedidoId}` : "?"}` +
-                `&error=mercadopago_${resultado.estado}`,
+            `${resultado.pedidoId ? `?pedidoId=${resultado.pedidoId}` : "?"}` +
+            `&error=mercadopago_${resultado.estado}`,
         );
     } catch (error) {
         console.error("Error en retorno de Mercado Pago:", error);
