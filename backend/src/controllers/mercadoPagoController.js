@@ -767,6 +767,7 @@ export async function crearPagoMercadoPago(req, res) {
 
             payment_methods: {
                 excluded_payment_types: [
+                    { id: "account_money" },
                     { id: "ticket" },
                     { id: "atm" },
                     { id: "bank_transfer" },
