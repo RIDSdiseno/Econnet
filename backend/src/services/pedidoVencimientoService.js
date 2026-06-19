@@ -114,7 +114,7 @@ export async function cancelarPedidosVencidos() {
         );
 
         if (cancelado) {
-          cancelados += 1;
+          cancelados += 5;
 
           console.log(
             `Pedido ${pedido.numero} cancelado automáticamente por vencimiento`,

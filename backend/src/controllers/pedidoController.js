@@ -4,6 +4,7 @@ import {
   obtenerInfoEstadoPedido,
   estadoPedidoValido,
 } from "../utils/estadosPedido.js";
+import { generarDocumentoPedidoPDF } from "../services/documentoPdfService.js";
 
 
 const METODOS_PAGO_VALIDOS = [
@@ -819,6 +820,187 @@ export const actualizarEstadoPedido = async (req, res) => {
       ok: false,
       mensaje:
         error.message || "Error al actualizar estado del pedido",
+    });
+  }
+};
+
+
+export const descargarDocumentoPedidoInvitado = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orden } = req.query;
+
+    const pedidoId = Number(id);
+
+    if (!pedidoId || !orden) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Datos inválidos para descargar el documento",
+      });
+    }
+
+    const pedido = await prisma.pedido.findFirst({
+      where: {
+        id: pedidoId,
+        usuarioId: null,
+        ordenCompraPago: String(orden),
+        estadoPago: "aprobado",
+      },
+      include: {
+        items: true,
+        direccion: true,
+        seguimientos: {
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+
+    if (!pedido) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Documento no encontrado",
+      });
+    }
+
+    const buffer = await generarDocumentoPedidoPDF(pedido);
+
+    const tipoDocumento =
+      pedido.documento === "factura" ? "Factura-Proforma" : "Comprobante";
+
+    const numeroPedido = String(pedido.numero || pedido.id).replace(
+      /[^a-zA-Z0-9-_]/g,
+      "_",
+    );
+
+    const nombreArchivo = `${tipoDocumento}-${numeroPedido}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${nombreArchivo}"`,
+    );
+
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Error al descargar documento invitado:", error);
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo descargar el documento",
+    });
+  }
+};
+
+
+
+export const obtenerSeguimientoPedidoInvitado = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orden } = req.query;
+
+    const pedidoId = Number(id);
+
+    if (!pedidoId || !orden) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Datos inválidos para consultar el seguimiento",
+      });
+    }
+
+    const pedido = await prisma.pedido.findFirst({
+      where: {
+        id: pedidoId,
+        usuarioId: null,
+        ordenCompraPago: String(orden),
+      },
+      include: {
+        items: true,
+        direccion: true,
+        seguimientos: {
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+
+    if (!pedido) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "Pedido no encontrado",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      pedido,
+    });
+  } catch (error) {
+    console.error("Error al obtener seguimiento invitado:", error);
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al obtener seguimiento del pedido",
+    });
+  }
+};
+
+export const buscarPedidoInvitado = async (req, res) => {
+  try {
+    const { numero, email } = req.query;
+
+    const numeroPedido = String(numero || "").trim();
+    const emailCliente = String(email || "").trim().toLowerCase();
+
+    if (!numeroPedido || !emailCliente) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Debes ingresar número de pedido y correo",
+      });
+    }
+
+    const pedido = await prisma.pedido.findFirst({
+      where: {
+        usuarioId: null,
+        numero: {
+          equals: numeroPedido,
+          mode: "insensitive",
+        },
+        emailCliente: {
+          equals: emailCliente,
+          mode: "insensitive",
+        },
+      },
+      include: {
+        items: true,
+        direccion: true,
+        seguimientos: {
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+
+    if (!pedido) {
+      return res.status(404).json({
+        ok: false,
+        mensaje: "No encontramos un pedido con esos datos",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      pedido,
+    });
+  } catch (error) {
+    console.error("Error al buscar pedido invitado:", error);
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al buscar el pedido",
     });
   }
 };

@@ -271,7 +271,8 @@ export async function crearPagoWebpay(req, res) {
     const buyOrder = generarOrdenCompra(pedido.id);
     const sessionId = pedido.usuarioId
       ? `usuario-${pedido.usuarioId}`
-      : `invitado-${pedido.id}`
+      : `invitado-${pedido.id}`;
+
     const amount = pedido.total;
 
     const returnUrl =
@@ -314,7 +315,11 @@ export async function crearPagoWebpay(req, res) {
 }
 
 export async function retornoWebpay(req, res) {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = (
+    process.env.FRONTEND_URL || "http://localhost:5173"
+  )
+    .trim()
+    .replace(/\/+$/, "");
 
   try {
     const token = req.body?.token_ws || req.query?.token_ws;
@@ -349,7 +354,21 @@ export async function retornoWebpay(req, res) {
 
     console.log("Respuesta Webpay:", response);
 
-    const pedidoId = obtenerPedidoIdDesdeOrdenCompra(response.buy_order);
+    const buyOrder =
+      response.buy_order ||
+      response.buyOrder ||
+      response.buy_order_webpay;
+
+    const responseCode =
+      response.response_code ??
+      response.responseCode;
+
+    const authorizationCode =
+      response.authorization_code ||
+      response.authorizationCode ||
+      null;
+
+    const pedidoId = obtenerPedidoIdDesdeOrdenCompra(buyOrder);
 
     if (!pedidoId) {
       return res.redirect(
@@ -370,7 +389,7 @@ export async function retornoWebpay(req, res) {
       return res.redirect(`${frontendUrl}/carrito?error=pedido_no_encontrado`);
     }
 
-    if (response.response_code === 0) {
+    if (responseCode === 0) {
       if (pedido.estadoPago !== "aprobado") {
         await prisma.$transaction(async (txPrisma) => {
           await txPrisma.pedido.update({
@@ -381,8 +400,8 @@ export async function retornoWebpay(req, res) {
               estado: "confirmado",
               estadoPago: "aprobado",
               tokenPago: token,
-              ordenCompraPago: response.buy_order,
-              codigoAutorizacion: response.authorization_code || null,
+              ordenCompraPago: buyOrder,
+              codigoAutorizacion: authorizationCode,
               fechaPago: new Date(),
               seguimientos: {
                 create: crearSeguimientoEstado(
@@ -421,25 +440,19 @@ export async function retornoWebpay(req, res) {
               },
             });
           }
-
-          await txPrisma.carritoItem.deleteMany({
-            where: {
-              usuarioId: pedido.usuarioId,
-            },
-          });
         });
       }
 
       enviarDocumentoPagoEnSegundoPlano(pedidoId);
 
       return res.redirect(
-        `${frontendUrl}/compra-exitosa?pedidoId=${pedidoId}&orden=${response.buy_order}`,
+        `${frontendUrl}/compra-exitosa?pedidoId=${pedidoId}&orden=${buyOrder}`,
       );
     }
 
     await cancelarPedidoWebpay({
       tokenPago: token,
-      ordenCompraPago: response.buy_order,
+      ordenCompraPago: buyOrder,
       estadoPago: "rechazado",
     });
 
@@ -478,6 +491,13 @@ export async function crearPagoOneclick(req, res) {
       return res.status(404).json({
         ok: false,
         mensaje: "Pedido no encontrado",
+      });
+    }
+
+    if (pedido.total <= 0) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El total del pedido debe ser mayor a 0",
       });
     }
 

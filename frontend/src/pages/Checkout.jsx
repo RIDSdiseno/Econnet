@@ -39,6 +39,34 @@ function formatearPrecio(valor) {
   }).format(valor);
 }
 
+const OPCIONES_REGIONES = [
+  { value: "Arica y Parinacota", label: "Arica y Parinacota" },
+  { value: "Tarapacá", label: "Tarapacá" },
+  { value: "Antofagasta", label: "Antofagasta" },
+  { value: "Atacama", label: "Atacama" },
+  { value: "Coquimbo", label: "Coquimbo" },
+  { value: "Valparaíso", label: "Valparaíso" },
+  { value: "Región Metropolitana", label: "Región Metropolitana" },
+  {
+    value: "Libertador General Bernardo O'Higgins",
+    label: "Libertador General Bernardo O'Higgins",
+  },
+  { value: "Maule", label: "Maule" },
+  { value: "Ñuble", label: "Ñuble" },
+  { value: "Biobío", label: "Biobío" },
+  { value: "La Araucanía", label: "La Araucanía" },
+  { value: "Los Ríos", label: "Los Ríos" },
+  { value: "Los Lagos", label: "Los Lagos" },
+  {
+    value: "Aysén del General Carlos Ibáñez del Campo",
+    label: "Aysén del General Carlos Ibáñez del Campo",
+  },
+  {
+    value: "Magallanes y de la Antártica Chilena",
+    label: "Magallanes y de la Antártica Chilena",
+  },
+];
+
 function adaptarItemCheckout(item) {
   const producto = item.producto;
 
@@ -226,19 +254,42 @@ function Checkout() {
         return;
       }
 
-      if (!estaLogueado || !token) {
-        setDespachoCalculado({
-          codigo: "INVITADO",
-          nombre: "Despacho a domicilio",
-          precio: 0,
-        });
+      if (estaLogueado && token) {
+        if (datos.tipoEntrega === "despacho" && !datos.direccionId) {
+          setDespachoCalculado({
+            codigo: "SIN_DIRECCION",
+            nombre: "Selecciona una dirección",
+            precio: 0,
+          });
+          return;
+        }
+
+        try {
+          setCargandoDespacho(true);
+
+          const despacho = await calcularDespacho(
+            token,
+            datos.tipoEntrega,
+            datos.direccionId,
+          );
+
+          setDespachoCalculado(despacho);
+        } catch (error) {
+          message.error(error.message || "No se pudo calcular el despacho");
+        } finally {
+          setCargandoDespacho(false);
+        }
+
         return;
       }
 
-      if (datos.tipoEntrega === "despacho" && !datos.direccionId) {
+      const regionInvitado = datosInvitado.region.trim();
+      const comunaInvitado = datosInvitado.comuna.trim();
+
+      if (!regionInvitado || !comunaInvitado) {
         setDespachoCalculado({
-          codigo: "SIN_DIRECCION",
-          nombre: "Selecciona una dirección",
+          codigo: "SIN_REGION_COMUNA",
+          nombre: "Ingresa región y comuna",
           precio: 0,
         });
         return;
@@ -247,14 +298,19 @@ function Checkout() {
       try {
         setCargandoDespacho(true);
 
-        const despacho = await calcularDespacho(
-          token,
-          datos.tipoEntrega,
-          datos.direccionId,
-        );
+        const despacho = await calcularDespacho(null, datos.tipoEntrega, null, {
+          region: regionInvitado,
+          comuna: comunaInvitado,
+        });
 
         setDespachoCalculado(despacho);
       } catch (error) {
+        setDespachoCalculado({
+          codigo: "ERROR_DESPACHO",
+          nombre: "No se pudo calcular el despacho",
+          precio: 0,
+        });
+
         message.error(error.message || "No se pudo calcular el despacho");
       } finally {
         setCargandoDespacho(false);
@@ -267,6 +323,8 @@ function Checkout() {
     estaLogueado,
     datos.tipoEntrega,
     datos.direccionId,
+    datosInvitado.region,
+    datosInvitado.comuna,
     cargandoAuth,
     cargandoCheckout,
   ]);
@@ -376,9 +434,11 @@ function Checkout() {
 
       if (
         datos.tipoEntrega === "despacho" &&
-        (!datosInvitado.direccionTexto.trim() || !datosInvitado.comuna.trim())
+        (!datosInvitado.direccionTexto.trim() ||
+          !datosInvitado.region.trim() ||
+          !datosInvitado.comuna.trim())
       ) {
-        message.warning("Ingresa dirección y comuna de despacho");
+        message.warning("Ingresa dirección, región y comuna de despacho");
         return;
       }
     }
@@ -1012,14 +1072,15 @@ function Checkout() {
                         </div>
 
                         <div>
-                          <Input
+                          <Select
                             size="large"
-                            placeholder="Región"
-                            value={datosInvitado.region}
-                            onChange={(e) =>
-                              actualizarDatoInvitado("region", e.target.value)
+                            placeholder="Selecciona región"
+                            value={datosInvitado.region || undefined}
+                            onChange={(value) =>
+                              actualizarDatoInvitado("region", value)
                             }
-                            className="!h-12 !rounded-xl"
+                            options={OPCIONES_REGIONES}
+                            className="!h-12 w-full"
                           />
                         </div>
                       </div>
@@ -1228,13 +1289,16 @@ function Checkout() {
                   <span className="font-bold text-emerald-600">
                     {cargandoDespacho
                       ? "Calculando..."
-                      : estaLogueado &&
-                          datos.tipoEntrega === "despacho" &&
-                          !datos.direccionId
+                      : datos.tipoEntrega === "despacho" &&
+                          despachoCalculado?.codigo === "SIN_REGION_COMUNA"
                         ? "Pendiente"
-                        : resumen.despacho === 0
-                          ? "Gratis"
-                          : formatearPrecio(resumen.despacho)}
+                        : estaLogueado &&
+                            datos.tipoEntrega === "despacho" &&
+                            !datos.direccionId
+                          ? "Pendiente"
+                          : resumen.despacho === 0
+                            ? "Gratis"
+                            : formatearPrecio(resumen.despacho)}
                   </span>
                   {despachoCalculado?.nombre && (
                     <p className="text-xs text-gray-500 text-right">

@@ -17,7 +17,12 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
-import { obtenerPedidoPorId, obtenerPedidos } from "../services/api";
+import {
+  obtenerPedidoPorId,
+  obtenerPedidos,
+  obtenerSeguimientoPedidoInvitado,
+  buscarPedidoInvitado,
+} from "../services/api";
 
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
@@ -146,6 +151,7 @@ function SeguimientoCompra() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const pedidoIdUrl = searchParams.get("pedidoId");
+  const ordenUrl = searchParams.get("orden");
 
   const { token, estaLogueado, cargandoAuth } = useAuth();
 
@@ -159,18 +165,29 @@ function SeguimientoCompra() {
     const cargarPedidoDesdeUrl = async () => {
       if (cargandoAuth) return;
 
-      if (!estaLogueado || !token) {
-        message.info("Inicia sesión para revisar el seguimiento de tu compra");
-        navigate("/login");
-        return;
-      }
-
       if (!pedidoIdUrl) return;
 
       try {
         setCargandoPedido(true);
 
-        const data = await obtenerPedidoPorId(token, pedidoIdUrl);
+        if (estaLogueado && token) {
+          const data = await obtenerPedidoPorId(token, pedidoIdUrl);
+          setPedido(data);
+          return;
+        }
+
+        if (!ordenUrl) {
+          message.warning(
+            "Para revisar un pedido como invitado necesitas el enlace completo del pedido",
+          );
+          return;
+        }
+
+        const data = await obtenerSeguimientoPedidoInvitado(
+          pedidoIdUrl,
+          ordenUrl,
+        );
+
         setPedido(data);
       } catch (error) {
         message.error(error.message || "No se pudo cargar el pedido");
@@ -180,7 +197,7 @@ function SeguimientoCompra() {
     };
 
     cargarPedidoDesdeUrl();
-  }, [pedidoIdUrl, token, estaLogueado, cargandoAuth, navigate]);
+  }, [pedidoIdUrl, ordenUrl, token, estaLogueado, cargandoAuth]);
 
   const buscarPedido = async () => {
     if (!numeroPedido.trim()) {
@@ -193,27 +210,32 @@ function SeguimientoCompra() {
       return;
     }
 
-    if (!estaLogueado || !token) {
-      message.info("Inicia sesión para buscar tus pedidos");
-      navigate("/login");
-      return;
-    }
-
     try {
       setBuscandoPedido(true);
 
-      const pedidos = await obtenerPedidos(token);
+      if (estaLogueado && token) {
+        const pedidos = await obtenerPedidos(token);
 
-      const pedidoEncontrado = pedidos.find(
-        (item) =>
-          item.numero.toLowerCase() === numeroPedido.trim().toLowerCase() &&
-          item.emailCliente.toLowerCase() === correo.trim().toLowerCase(),
-      );
+        const pedidoEncontrado = pedidos.find(
+          (item) =>
+            item.numero.toLowerCase() === numeroPedido.trim().toLowerCase() &&
+            item.emailCliente.toLowerCase() === correo.trim().toLowerCase(),
+        );
 
-      if (!pedidoEncontrado) {
-        message.warning("No encontramos un pedido con esos datos");
+        if (!pedidoEncontrado) {
+          message.warning("No encontramos un pedido con esos datos");
+          return;
+        }
+
+        setPedido(pedidoEncontrado);
+        message.success("Pedido encontrado");
         return;
       }
+
+      const pedidoEncontrado = await buscarPedidoInvitado(
+        numeroPedido.trim(),
+        correo.trim(),
+      );
 
       setPedido(pedidoEncontrado);
       message.success("Pedido encontrado");
@@ -223,7 +245,6 @@ function SeguimientoCompra() {
       setBuscandoPedido(false);
     }
   };
-
   const pasoActual = useMemo(() => {
     if (!pedido) return 0;
 

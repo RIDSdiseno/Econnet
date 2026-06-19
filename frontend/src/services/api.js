@@ -411,7 +411,12 @@ export const obtenerPedidoPorId = async (token, id) => {
 };
 
 
-export const calcularDespacho = async (token, tipoEntrega, direccionId) => {
+export const calcularDespacho = async (
+  token,
+  tipoEntrega,
+  direccionId = null,
+  datosInvitado = {},
+) => {
   const params = new URLSearchParams({
     tipoEntrega,
   });
@@ -420,12 +425,24 @@ export const calcularDespacho = async (token, tipoEntrega, direccionId) => {
     params.append("direccionId", direccionId);
   }
 
+  if (datosInvitado.region) {
+    params.append("region", datosInvitado.region);
+  }
+
+  if (datosInvitado.comuna) {
+    params.append("comuna", datosInvitado.comuna);
+  }
+
+  const headers = {};
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const respuesta = await fetch(
     `${API_URL}/despacho/calcular?${params.toString()}`,
     {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
     },
   );
 
@@ -651,6 +668,49 @@ export const descargarDocumentoPedido = async (token, pedidoId) => {
   };
 };
 
+export const descargarDocumentoPedidoInvitado = async (pedidoId, orden) => {
+  const params = new URLSearchParams({
+    orden,
+  });
+
+  const respuesta = await fetch(
+    `${API_URL}/pedidos/publico/${pedidoId}/documento?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
+  if (!respuesta.ok) {
+    let mensaje = "No se pudo descargar el documento";
+
+    try {
+      const data = await respuesta.json();
+      mensaje = data.mensaje || mensaje;
+    } catch {
+      // La respuesta no venía en formato JSON.
+    }
+
+    throw new Error(mensaje);
+  }
+
+  const blob = await respuesta.blob();
+
+  const contentDisposition =
+    respuesta.headers.get("Content-Disposition") || "";
+
+  const coincidencia = contentDisposition.match(
+    /filename="?([^"]+)"?/i,
+  );
+
+  const nombreArchivo =
+    coincidencia?.[1] || `comprobante-pedido-${pedidoId}.pdf`;
+
+  return {
+    blob,
+    nombreArchivo,
+  };
+};
+
 export const crearTicketSoporte = async (datos, token = null) => {
   const headers = {
     "Content-Type": "application/json",
@@ -758,3 +818,39 @@ export const responderMiSolicitud = async (
   return data;
 };
 
+export const obtenerSeguimientoPedidoInvitado = async (pedidoId, orden) => {
+  const params = new URLSearchParams({
+    orden,
+  });
+
+  const respuesta = await fetch(
+    `${API_URL}/pedidos/publico/${pedidoId}/seguimiento?${params.toString()}`,
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudo obtener el seguimiento");
+  }
+
+  return data.pedido;
+};
+
+export const buscarPedidoInvitado = async (numero, email) => {
+  const params = new URLSearchParams({
+    numero,
+    email,
+  });
+
+  const respuesta = await fetch(
+    `${API_URL}/pedidos/publico/buscar?${params.toString()}`,
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudo buscar el pedido");
+  }
+
+  return data.pedido;
+};

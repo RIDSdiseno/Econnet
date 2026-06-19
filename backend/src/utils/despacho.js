@@ -79,7 +79,7 @@ export const obtenerCodigoZonaDespacho = (tipoEntrega, direccion) => {
 
     const regionNormalizada = normalizarTexto(region);
     const comunaNormalizada = normalizarTexto(comuna);
-    
+
     if (regionNormalizada === normalizarTexto("Región Metropolitana")) {
         const comunasGranSantiagoNormalizadas = comunasGranSantiago.map((item) =>
             normalizarTexto(item),
@@ -92,15 +92,27 @@ export const obtenerCodigoZonaDespacho = (tipoEntrega, direccion) => {
         return "RM_OTRAS";
     }
 
-    if (regionesCentro.includes(region)) {
+    const regionesCentroNormalizadas = regionesCentro.map((item) =>
+        normalizarTexto(item),
+    );
+
+    const regionesIntermediasNormalizadas = regionesIntermedias.map((item) =>
+        normalizarTexto(item),
+    );
+
+    const regionesExtremasNormalizadas = regionesExtremas.map((item) =>
+        normalizarTexto(item),
+    );
+
+    if (regionesCentroNormalizadas.includes(regionNormalizada)) {
         return "CENTRO";
     }
 
-    if (regionesIntermedias.includes(region)) {
+    if (regionesIntermediasNormalizadas.includes(regionNormalizada)) {
         return "INTERMEDIA";
     }
 
-    if (regionesExtremas.includes(region)) {
+    if (regionesExtremasNormalizadas.includes(regionNormalizada)) {
         return "EXTREMA";
     }
 

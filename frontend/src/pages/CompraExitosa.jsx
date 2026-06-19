@@ -16,8 +16,12 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
-import { obtenerPedidoPorId, descargarDocumentoPedido } from "../services/api";
-
+import {
+  obtenerPedidoPorId,
+  descargarDocumentoPedido,
+  descargarDocumentoPedidoInvitado,
+} from "../services/api";
+import { vaciarCarritoInvitado } from "../utils/carritoInvitado";
 function formatearPrecio(valor) {
   return new Intl.NumberFormat("es-CL", {
     style: "currency",
@@ -135,13 +139,13 @@ function CompraExitosa() {
     const cargarPedido = async () => {
       if (cargandoAuth) return;
 
-      if (!estaLogueado || !token) {
-        message.info("Inicia sesión para ver el detalle de tu compra");
-        navigate("/login");
+      if (!pedidoId) {
+        setCargandoPedido(false);
         return;
       }
 
-      if (!pedidoId) {
+      if (!estaLogueado || !token) {
+        vaciarCarritoInvitado();
         setCargandoPedido(false);
         return;
       }
@@ -159,7 +163,7 @@ function CompraExitosa() {
     };
 
     cargarPedido();
-  }, [pedidoId, token, estaLogueado, cargandoAuth, navigate]);
+  }, [pedidoId, token, estaLogueado, cargandoAuth]);
 
   const handleDescargarDocumento = async () => {
     if (!pedido?.id) {
@@ -202,6 +206,40 @@ function CompraExitosa() {
     }
   };
 
+  const handleDescargarDocumentoInvitado = async () => {
+    if (!pedidoId || !ordenWebpay) {
+      message.warning("No se encontraron los datos del pedido");
+      return;
+    }
+
+    try {
+      setDescargandoDocumento(true);
+
+      const { blob, nombreArchivo } = await descargarDocumentoPedidoInvitado(
+        pedidoId,
+        ordenWebpay,
+      );
+
+      const urlTemporal = window.URL.createObjectURL(blob);
+
+      const enlace = document.createElement("a");
+      enlace.href = urlTemporal;
+      enlace.download = nombreArchivo;
+
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+
+      window.URL.revokeObjectURL(urlTemporal);
+
+      message.success("Documento descargado correctamente");
+    } catch (error) {
+      message.error(error.message || "No se pudo descargar el documento");
+    } finally {
+      setDescargandoDocumento(false);
+    }
+  };
+
   if (cargandoAuth || cargandoPedido) {
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
@@ -222,7 +260,102 @@ function CompraExitosa() {
     );
   }
 
+  const esCompraInvitado = !estaLogueado || !token;
+
   if (!pedido) {
+    if (esCompraInvitado && pedidoId) {
+      return (
+        <div className="min-h-screen bg-gray-100 text-gray-900">
+          <Navbar />
+
+          <main className="max-w-5xl mx-auto px-8 py-12">
+            <section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+              <div className="bg-gray-950 text-white px-8 py-10 text-center relative overflow-hidden">
+                <div className="absolute -top-20 -right-20 w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-24 -left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-emerald-400 text-gray-950 flex items-center justify-center mx-auto mb-5">
+                    <CheckCircleOutlined className="text-4xl" />
+                  </div>
+
+                  <h1 className="text-4xl font-black">
+                    Compra realizada correctamente
+                  </h1>
+
+                  <p className="text-gray-300 mt-3">
+                    Gracias por comprar en Econnet. Hemos recibido tu pedido.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 md:p-10">
+                <Result
+                  status="success"
+                  title="Tu pago fue aprobado con éxito"
+                  subTitle={`Número de pedido: ${pedidoId}`}
+                  extra={null}
+                />
+
+                <Alert
+                  type="success"
+                  message="Pago aprobado correctamente"
+                  description="Tu compra fue confirmada. Te enviaremos la información del pedido al correo ingresado durante el checkout."
+                  showIcon
+                  className="!mb-6 !rounded-2xl"
+                />
+
+                {ordenWebpay && (
+                  <div className="mt-8 bg-gray-50 border border-gray-200 rounded-2xl p-6">
+                    <h3 className="font-black text-gray-900 mb-3">
+                      Información Webpay
+                    </h3>
+
+                    <p className="text-sm text-gray-600">
+                      <span className="font-bold">Orden: </span>
+                      {ordenWebpay}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row justify-center gap-4 mt-10">
+                  <Link to="/productos">
+                    <Button
+                      size="large"
+                      className="!h-12 !rounded-2xl !bg-gray-950 !text-white !border-gray-950 !font-black !px-8 hover:!bg-black"
+                    >
+                      Seguir comprando
+                    </Button>
+                  </Link>
+
+                  <Button
+                    size="large"
+                    icon={<DownloadOutlined />}
+                    loading={descargandoDocumento}
+                    onClick={handleDescargarDocumentoInvitado}
+                    className="!h-12 !rounded-2xl !font-bold !px-8"
+                  >
+                    Descargar comprobante
+                  </Button>
+
+                  <Link to="/">
+                    <Button
+                      size="large"
+                      className="!h-12 !rounded-2xl !font-bold !px-8"
+                    >
+                      Volver al inicio
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <Footer />
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-100 text-gray-900">
         <Navbar />
@@ -461,7 +594,11 @@ function CompraExitosa() {
                 </Button>
               )}
 
-              <Link to={`/seguimiento-compra?pedidoId=${pedido.id}`}>
+              <Link
+                to={`/seguimiento-compra?pedidoId=${pedidoId}&orden=${encodeURIComponent(
+                  ordenWebpay || "",
+                )}`}
+              >
                 <Button
                   size="large"
                   className="!h-12 !rounded-2xl !font-bold !px-8"

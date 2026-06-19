@@ -1,9 +1,9 @@
 import express from "express";
 import { calcularDespachoPedido } from "../controllers/despachoController.js";
-import { protegerRuta } from "../middlewares/authMiddleware.js";
+import { autenticacionOpcional } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/calcular", protegerRuta, calcularDespachoPedido);
+router.get("/calcular", autenticacionOpcional, calcularDespachoPedido);
 
 export default router;
