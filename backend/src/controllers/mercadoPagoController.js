@@ -765,6 +765,13 @@ export async function crearPagoMercadoPago(req, res) {
 
             external_reference: referenciaExterna,
 
+            binary_mode: true,
+
+            payer: {
+                email: pedido.emailCliente,
+                name: pedido.nombreCliente || undefined,
+            },
+
             metadata: {
                 pedido_id: pedido.id,
                 pago_id: pagoCreado.id,
