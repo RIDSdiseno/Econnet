@@ -830,12 +830,12 @@ export async function crearPagoMercadoPago(req, res) {
             : null;
 
         /*
-         * Con credenciales de prueba normalmente usaremos
-         * sandbox_init_point.
-         */
+ * Usamos init_point incluso en pruebas con cuentas test.
+ * El sandbox_init_point puede generar problemas en Checkout Pro.
+ */
         const urlPago =
-            response.sandbox_init_point ||
             response.init_point ||
+            response.sandbox_init_point ||
             null;
 
         if (!preferenciaId || !urlPago) {
