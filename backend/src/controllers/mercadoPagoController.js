@@ -943,11 +943,9 @@ export async function retornoMercadoPago(req, res) {
             });
         } else {
             return res.redirect(
-                `${frontendUrl}/mi-cuenta` +
-                "?seccion=pedidos&info=mercadopago_sin_payment_id",
+                `${frontendUrl}/carrito?info=mercadopago_sin_payment_id`,
             );
         }
-
         console.log("RESULTADO RETORNO MERCADO PAGO:", resultado);
 
         if (
@@ -963,19 +961,17 @@ export async function retornoMercadoPago(req, res) {
 
         if (resultado.estado === "revision_manual") {
             return res.redirect(
-                `${frontendUrl}/mi-cuenta` +
-                "?seccion=pedidos" +
-                `&pedidoId=${resultado.pedidoId}` +
+                `${frontendUrl}/carrito` +
+                `?pedidoId=${resultado.pedidoId}` +
                 "&error=pago_aprobado_revision",
             );
         }
 
         if (resultado.estado === "pendiente") {
             return res.redirect(
-                `${frontendUrl}/mi-cuenta` +
-                "?seccion=pedidos" +
-                `${resultado.pedidoId ? `&pedidoId=${resultado.pedidoId}` : ""}` +
-                "&info=pago_pendiente",
+                `${frontendUrl}/carrito` +
+                `?info=pago_pendiente` +
+                `${resultado.pedidoId ? `&pedidoId=${resultado.pedidoId}` : ""}`,
             );
         }
 
