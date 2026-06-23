@@ -596,7 +596,11 @@ function CompraExitosa() {
                   size="large"
                   icon={<DownloadOutlined />}
                   loading={descargandoDocumento}
-                  onClick={handleDescargarDocumento}
+                  onClick={
+                    esCompraInvitado
+                      ? handleDescargarDocumentoInvitado
+                      : handleDescargarDocumento
+                  }
                   className="!h-12 !rounded-2xl !font-bold !px-8"
                 >
                   Descargar comprobante
@@ -616,14 +620,16 @@ function CompraExitosa() {
                 </Button>
               </Link>
 
-              <Link to="/mi-cuenta">
-                <Button
-                  size="large"
-                  className="!h-12 !rounded-2xl !font-bold !px-8"
-                >
-                  Ver mis pedidos
-                </Button>
-              </Link>
+              {!esCompraInvitado && (
+                <Link to="/mi-cuenta">
+                  <Button
+                    size="large"
+                    className="!h-12 !rounded-2xl !font-bold !px-8"
+                  >
+                    Ver mis pedidos
+                  </Button>
+                </Link>
+              )}
 
               <Link to="/productos">
                 <Button
