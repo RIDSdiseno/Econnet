@@ -12,11 +12,16 @@ import {
   message,
   Spin,
 } from "antd";
-import { ArrowLeftOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  ReloadOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
 import {
   obtenerPedidoAdminPorId,
   actualizarEstadoPedidoAdmin,
 } from "../../services/adminApi";
+import { descargarDocumentoPedido } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
 const estadosPedido = [
@@ -88,6 +93,7 @@ function AdminDetallePedido() {
   const [pedido, setPedido] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [actualizando, setActualizando] = useState(false);
+  const [descargandoDocumento, setDescargandoDocumento] = useState(false);
 
   const cargarPedido = async () => {
     try {
@@ -115,6 +121,54 @@ function AdminDetallePedido() {
       message.error(error.message || "No se pudo actualizar el estado");
     } finally {
       setActualizando(false);
+    }
+  };
+
+  const descargarArchivo = (blob, nombreArchivo) => {
+    const urlTemporal = window.URL.createObjectURL(blob);
+
+    const enlace = document.createElement("a");
+    enlace.href = urlTemporal;
+    enlace.download = nombreArchivo;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    window.URL.revokeObjectURL(urlTemporal);
+  };
+
+  const descargarComprobantePedido = async () => {
+    if (!pedido?.id) {
+      message.warning("No se encontró el pedido");
+      return;
+    }
+
+    if (pedido.estadoPago !== "aprobado") {
+      message.warning(
+        "El comprobante estará disponible cuando el pago esté aprobado",
+      );
+      return;
+    }
+
+    try {
+      setDescargandoDocumento(true);
+
+      const { blob, nombreArchivo } = await descargarDocumentoPedido(
+        tokenActual,
+        pedido.id,
+      );
+
+      descargarArchivo(
+        blob,
+        nombreArchivo || `comprobante-pedido-${pedido.id}.pdf`,
+      );
+
+      message.success("Comprobante descargado correctamente");
+    } catch (error) {
+      message.error(error.message || "No se pudo descargar el comprobante");
+    } finally {
+      setDescargandoDocumento(false);
     }
   };
 
@@ -202,14 +256,25 @@ function AdminDetallePedido() {
             Detalle completo del pedido seleccionado.
           </p>
         </div>
+        <div className="flex flex-wrap gap-3">
+          {pedido.estadoPago === "aprobado" && (
+            <Button
+              icon={<DownloadOutlined />}
+              loading={descargandoDocumento}
+              onClick={descargarComprobantePedido}
+            >
+              Descargar comprobante
+            </Button>
+          )}
 
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={cargarPedido}
-          loading={cargando}
-        >
-          Actualizar
-        </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={cargarPedido}
+            loading={cargando}
+          >
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

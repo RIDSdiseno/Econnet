@@ -30,7 +30,7 @@ const categoriasSoporte = [
   },
   {
     value: "documentos",
-    label: "Boletas y facturas",
+    label: "Comprobantes de compra",
   },
   {
     value: "garantias",
@@ -61,6 +61,7 @@ const categoriasSoporte = [
 const CATEGORIAS_CON_PEDIDO = new Set([
   "despacho",
   "pagos",
+  "documentos",
   "garantias",
   "devoluciones",
   "reembolsos",

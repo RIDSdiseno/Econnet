@@ -13,6 +13,7 @@ import {
   ShoppingOutlined,
   InboxOutlined,
   DollarOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -22,6 +23,8 @@ import {
   obtenerPedidos,
   obtenerSeguimientoPedidoInvitado,
   buscarPedidoInvitado,
+  descargarDocumentoPedido,
+  descargarDocumentoPedidoInvitado,
 } from "../services/api";
 
 function formatearPrecio(valor) {
@@ -148,7 +151,7 @@ const formatearTipoEntrega = (tipo) => {
 };
 
 function SeguimientoCompra() {
-  const navigate = useNavigate();
+
   const [searchParams] = useSearchParams();
   const pedidoIdUrl = searchParams.get("pedidoId");
   const ordenUrl = searchParams.get("orden");
@@ -160,7 +163,7 @@ function SeguimientoCompra() {
   const [pedido, setPedido] = useState(null);
   const [cargandoPedido, setCargandoPedido] = useState(false);
   const [buscandoPedido, setBuscandoPedido] = useState(false);
-
+  const [descargandoDocumento, setDescargandoDocumento] = useState(false);
   useEffect(() => {
     const cargarPedidoDesdeUrl = async () => {
       if (cargandoAuth) return;
@@ -245,6 +248,79 @@ function SeguimientoCompra() {
       setBuscandoPedido(false);
     }
   };
+
+  const descargarArchivo = (blob, nombreArchivo) => {
+    const urlTemporal = window.URL.createObjectURL(blob);
+
+    const enlace = document.createElement("a");
+    enlace.href = urlTemporal;
+    enlace.download = nombreArchivo;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    window.URL.revokeObjectURL(urlTemporal);
+  };
+
+  const handleDescargarComprobante = async () => {
+    if (!pedido?.id) {
+      message.warning("No se encontró el pedido");
+      return;
+    }
+
+    if (pedido.estadoPago !== "aprobado") {
+      message.warning(
+        "El comprobante estará disponible cuando el pago esté aprobado",
+      );
+      return;
+    }
+
+    try {
+      setDescargandoDocumento(true);
+
+      if (estaLogueado && token) {
+        const { blob, nombreArchivo } = await descargarDocumentoPedido(
+          token,
+          pedido.id,
+        );
+
+        descargarArchivo(
+          blob,
+          nombreArchivo || `comprobante-pedido-${pedido.id}.pdf`,
+        );
+
+        message.success("Comprobante descargado correctamente");
+        return;
+      }
+
+      const ordenPedido = ordenUrl || pedido.ordenCompraPago;
+
+      if (!ordenPedido) {
+        message.warning(
+          "No se encontró la orden de pago necesaria para descargar el comprobante",
+        );
+        return;
+      }
+
+      const { blob, nombreArchivo } = await descargarDocumentoPedidoInvitado(
+        pedido.id,
+        ordenPedido,
+      );
+
+      descargarArchivo(
+        blob,
+        nombreArchivo || `comprobante-pedido-${pedido.id}.pdf`,
+      );
+
+      message.success("Comprobante descargado correctamente");
+    } catch (error) {
+      message.error(error.message || "No se pudo descargar el comprobante");
+    } finally {
+      setDescargandoDocumento(false);
+    }
+  };
+
   const pasoActual = useMemo(() => {
     if (!pedido) return 0;
 
@@ -590,6 +666,18 @@ function SeguimientoCompra() {
                           }, ${pedido.region || ""}`}
                     </p>
                   </div>
+                  {pedido.estadoPago === "aprobado" && (
+                    <Button
+                      block
+                      size="large"
+                      icon={<DownloadOutlined />}
+                      loading={descargandoDocumento}
+                      onClick={handleDescargarComprobante}
+                      className="!mt-5 !h-12 !rounded-xl !font-bold"
+                    >
+                      Descargar comprobante
+                    </Button>
+                  )}
                 </div>
               </div>
 

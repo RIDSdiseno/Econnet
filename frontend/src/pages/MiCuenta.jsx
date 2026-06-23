@@ -25,6 +25,7 @@ import {
   ReloadOutlined,
   SendOutlined,
   ClockCircleOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -44,6 +45,7 @@ import {
   obtenerMisSolicitudes,
   obtenerMiSolicitudPorId,
   responderMiSolicitud,
+  descargarDocumentoPedido,
 } from "../services/api";
 import { opcionesRegiones } from "../data/regionesComunasChile";
 
@@ -130,7 +132,7 @@ function formatearCategoriaSoporte(categoria) {
   const categorias = {
     despacho: "Despacho y seguimiento",
     pagos: "Pagos",
-    documentos: "Boletas y facturas",
+    documentos: "Comprobantes de compra",
     garantias: "Garantías",
     devoluciones: "Devoluciones",
     reembolsos: "Reembolsos",
@@ -228,6 +230,7 @@ function MiCuenta() {
   const [cargandoFavoritos, setCargandoFavoritos] = useState(false);
   const [pedidos, setPedidos] = useState([]);
   const [cargandoPedidos, setCargandoPedidos] = useState(false);
+  const [descargandoPedidoId, setDescargandoPedidoId] = useState(null);
   const [mediosPago, setMediosPago] = useState([]);
   const [cargandoMediosPago, setCargandoMediosPago] = useState(false);
   const [agregandoMedioPago, setAgregandoMedioPago] = useState(false);
@@ -480,6 +483,54 @@ function MiCuenta() {
       message.error(error.message || "No se pudo enviar la respuesta");
     } finally {
       setEnviandoRespuestaSolicitud(false);
+    }
+  };
+
+  const descargarArchivo = (blob, nombreArchivo) => {
+    const urlTemporal = window.URL.createObjectURL(blob);
+
+    const enlace = document.createElement("a");
+    enlace.href = urlTemporal;
+    enlace.download = nombreArchivo;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    window.URL.revokeObjectURL(urlTemporal);
+  };
+
+  const descargarComprobantePedido = async (pedido) => {
+    if (!pedido?.id) {
+      message.warning("No se encontró el pedido");
+      return;
+    }
+
+    if (pedido.estadoPago !== "aprobado") {
+      message.warning(
+        "El comprobante estará disponible cuando el pago esté aprobado",
+      );
+      return;
+    }
+
+    try {
+      setDescargandoPedidoId(pedido.id);
+
+      const { blob, nombreArchivo } = await descargarDocumentoPedido(
+        token,
+        pedido.id,
+      );
+
+      descargarArchivo(
+        blob,
+        nombreArchivo || `comprobante-pedido-${pedido.id}.pdf`,
+      );
+
+      message.success("Comprobante descargado correctamente");
+    } catch (error) {
+      message.error(error.message || "No se pudo descargar el comprobante");
+    } finally {
+      setDescargandoPedidoId(null);
     }
   };
 
@@ -1055,16 +1106,34 @@ function MiCuenta() {
                                 {formatearPrecio(pedido.total)}
                               </p>
 
-                              <Link
-                                to={`/seguimiento-compra?pedidoId=${pedido.id}`}
-                              >
-                                <Button
-                                  size="large"
-                                  className="!mt-4 !rounded-xl !font-bold"
+                              <div className="flex flex-col gap-3 mt-4">
+                                <Link
+                                  to={`/seguimiento-compra?pedidoId=${pedido.id}`}
                                 >
-                                  Ver seguimiento
-                                </Button>
-                              </Link>
+                                  <Button
+                                    block
+                                    size="large"
+                                    className="!rounded-xl !font-bold"
+                                  >
+                                    Ver seguimiento
+                                  </Button>
+                                </Link>
+
+                                {pedido.estadoPago === "aprobado" && (
+                                  <Button
+                                    block
+                                    size="large"
+                                    icon={<DownloadOutlined />}
+                                    loading={descargandoPedidoId === pedido.id}
+                                    onClick={() =>
+                                      descargarComprobantePedido(pedido)
+                                    }
+                                    className="!rounded-xl !font-bold"
+                                  >
+                                    Descargar comprobante
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </article>

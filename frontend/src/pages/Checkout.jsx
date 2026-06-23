@@ -133,7 +133,7 @@ function Checkout() {
   const [datos, setDatos] = useState({
     direccionId: "",
     tipoEntrega: "despacho",
-    metodoPago: "mercadopago",
+    metodoPago: "webpay",
     documento: "boleta",
   });
 
@@ -741,10 +741,7 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
                           value: "boleta",
                           label: "Comprobante de compra",
                         },
-                        {
-                          value: "factura",
-                          label: "Factura proforma (no tributaria)",
-                        },
+                        
                       ]}
                     />
                   </div>
