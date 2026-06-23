@@ -5,9 +5,10 @@ import {
   RightOutlined,
   ShoppingCartOutlined,
 } from "@ant-design/icons";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { obtenerProductos, agregarProductoCarrito } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -43,6 +44,7 @@ function adaptarProducto(producto) {
     precioNormal: producto.precioNormal || producto.precio,
     descuento: producto.descuento || 0,
     imagen: imagenPrincipal,
+    disponible: producto.stock > 0,
   };
 }
 
@@ -92,16 +94,24 @@ function CardRecomendado({ producto, cargandoCarrito, onAgregarCarrito }) {
             <p className="text-xl font-bold text-gray-950">
               {formatearPrecio(producto.precio)}
             </p>
-
-          
           </div>
 
           <button
             type="button"
-            disabled={cargandoCarrito}
-            onClick={() => onAgregarCarrito(producto)}
-            className="w-10 h-10 rounded-xl bg-emerald-400 text-gray-950 flex items-center justify-center hover:bg-emerald-300 transition shadow-sm border border-emerald-500 disabled:opacity-50"
-            title="Agregar al carrito"
+            disabled={cargandoCarrito || !producto.disponible}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onAgregarCarrito(producto);
+            }}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition shadow-sm border disabled:opacity-50 ${
+              producto.disponible
+                ? "bg-emerald-400 text-gray-950 hover:bg-emerald-300 border-emerald-500"
+                : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+            }`}
+            title={
+              producto.disponible ? "Agregar al carrito" : "Producto sin stock"
+            }
           >
             <ShoppingCartOutlined className="text-lg" />
           </button>
@@ -113,7 +123,7 @@ function CardRecomendado({ producto, cargandoCarrito, onAgregarCarrito }) {
 
 function Recomendados() {
   const carouselRef = useRef(null);
-  const navigate = useNavigate();
+
   const { token, estaLogueado } = useAuth();
 
   const [cargandoCarritoId, setCargandoCarritoId] = useState(null);
@@ -153,9 +163,24 @@ function Recomendados() {
   }, []);
 
   const agregarAlCarrito = async (producto) => {
+    if (!producto.disponible) {
+      message.warning("Este producto no tiene stock disponible");
+      return;
+    }
+
     if (!estaLogueado || !token) {
-      message.info("Inicia sesión para agregar productos al carrito");
-      navigate("/login");
+      try {
+        setCargandoCarritoId(producto.id);
+
+        agregarItemCarritoInvitado(producto.id, 1);
+
+        message.success("Producto agregado al carrito");
+      } catch (error) {
+        message.error(error.message || "No se pudo agregar al carrito");
+      } finally {
+        setCargandoCarritoId(null);
+      }
+
       return;
     }
 

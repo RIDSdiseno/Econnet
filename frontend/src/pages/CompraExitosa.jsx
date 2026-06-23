@@ -18,6 +18,7 @@ import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import {
   obtenerPedidoPorId,
+  obtenerSeguimientoPedidoInvitado,
   descargarDocumentoPedido,
   descargarDocumentoPedidoInvitado,
 } from "../services/api";
@@ -144,16 +145,27 @@ function CompraExitosa() {
         return;
       }
 
-      if (!estaLogueado || !token) {
-        vaciarCarritoInvitado();
-        setCargandoPedido(false);
-        return;
-      }
-
       try {
         setCargandoPedido(true);
 
-        const data = await obtenerPedidoPorId(token, pedidoId);
+        if (estaLogueado && token) {
+          const data = await obtenerPedidoPorId(token, pedidoId);
+          setPedido(data);
+          return;
+        }
+
+        vaciarCarritoInvitado();
+
+        if (!ordenWebpay) {
+          setCargandoPedido(false);
+          return;
+        }
+
+        const data = await obtenerSeguimientoPedidoInvitado(
+          pedidoId,
+          ordenWebpay,
+        );
+
         setPedido(data);
       } catch (error) {
         message.error(error.message || "No se pudo cargar el pedido");
@@ -163,7 +175,7 @@ function CompraExitosa() {
     };
 
     cargarPedido();
-  }, [pedidoId, token, estaLogueado, cargandoAuth]);
+  }, [pedidoId, ordenWebpay, token, estaLogueado, cargandoAuth]);
 
   const handleDescargarDocumento = async () => {
     if (!pedido?.id) {
@@ -176,8 +188,7 @@ function CompraExitosa() {
 
       const { blob } = await descargarDocumentoPedido(token, pedido.id);
 
-      const tipoDocumento =
-        pedido.documento === "factura" ? "Factura-Proforma" : "Boleta";
+      const tipoDocumento = "Comprobante";
 
       const numeroPedido = String(pedido.numero || pedido.id).replace(
         /[^a-zA-Z0-9-_]/g,
@@ -588,9 +599,7 @@ function CompraExitosa() {
                   onClick={handleDescargarDocumento}
                   className="!h-12 !rounded-2xl !font-bold !px-8"
                 >
-                  {pedido.documento === "factura"
-                    ? "Descargar factura proforma"
-                    : "Descargar comprobante"}
+                  Descargar comprobante
                 </Button>
               )}
 

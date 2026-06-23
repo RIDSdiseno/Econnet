@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
+import { message } from "antd";
+import { ShoppingCartOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { obtenerProductos } from "../services/api";
+import { obtenerProductos, agregarProductoCarrito } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
 
 const imagenFallback = "/img/productos/default-producto.png";
 
@@ -62,7 +66,7 @@ function adaptarProducto(producto, tipo) {
   };
 }
 
-function OfertaSmall({ item }) {
+function OfertaSmall({ item, cargandoCarrito, onAgregarCarrito }) {
   const mostrarPrecioNormal =
     item.enOferta && item.precioNormal && item.precioNormal > item.precio;
 
@@ -71,65 +75,66 @@ function OfertaSmall({ item }) {
     (item.descuento > 0 ? `${item.descuento}% DCTO.` : "");
 
   return (
-    <Link
-      to={`/producto/${item.id}`}
-      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden group flex flex-col h-[405px]"
-    >
-      <div className="relative h-52 bg-white flex items-center justify-center p-4 shrink-0">
-        <img
-          src={item.imagen}
-          alt={item.nombre}
-          className="max-h-full max-w-full object-contain group-hover:scale-105 transition"
-          onError={(e) => {
-            e.currentTarget.src = imagenFallback;
-          }}
-        />
+    <article className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden group flex flex-col h-[405px]">
+      <Link to={`/producto/${item.id}`}>
+        <div className="relative h-52 bg-white flex items-center justify-center p-4 shrink-0">
+          <img
+            src={item.imagen}
+            alt={item.nombre}
+            className="max-h-full max-w-full object-contain group-hover:scale-105 transition"
+            onError={(e) => {
+              e.currentTarget.src = imagenFallback;
+            }}
+          />
 
-        {item.enOferta && textoOferta && (
-          <span className="absolute left-3 top-3 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">
-            {textoOferta}
-          </span>
-        )}
-
-        <div className="absolute right-3 bottom-3 flex flex-col items-end gap-1">
-          {item.etiquetaEnvio && (
-            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">
-              {item.etiquetaEnvio}
+          {item.enOferta && textoOferta && (
+            <span className="absolute left-3 top-3 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">
+              {textoOferta}
             </span>
           )}
 
-          {item.etiquetaDisponibilidad ? (
-            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
-              {item.etiquetaDisponibilidad}
-            </span>
-          ) : item.disponible ? (
-            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
-              DISPONIBLE
-            </span>
-          ) : (
-            <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded">
-              SIN STOCK
-            </span>
-          )}
+          <div className="absolute right-3 bottom-3 flex flex-col items-end gap-1">
+            {item.etiquetaEnvio && (
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">
+                {item.etiquetaEnvio}
+              </span>
+            )}
+
+            {item.etiquetaDisponibilidad ? (
+              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
+                {item.etiquetaDisponibilidad}
+              </span>
+            ) : item.disponible ? (
+              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded">
+                DISPONIBLE
+              </span>
+            ) : (
+              <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded">
+                SIN STOCK
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      </Link>
 
       <div className="p-4 flex flex-col flex-1">
         <p className="text-xs uppercase font-semibold text-gray-700 mb-1">
           {item.marca}
         </p>
 
-        <h3
-          className="text-sm text-gray-900 leading-snug min-h-[58px] max-h-[58px]"
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {item.nombre}
-        </h3>
+        <Link to={`/producto/${item.id}`}>
+          <h3
+            className="text-sm text-gray-900 leading-snug min-h-[58px] max-h-[58px] hover:text-gray-950"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {item.nombre}
+          </h3>
+        </Link>
 
         <div className="mt-auto">
           <div className="min-h-[22px] mb-1">
@@ -140,14 +145,34 @@ function OfertaSmall({ item }) {
             )}
           </div>
 
-          <p className="text-xl font-bold text-blue-900 mb-3">
-            {formatearPrecio(item.precio)}
-          </p>
+          <div className="flex items-end justify-between gap-2">
+            <p className="text-xl font-bold text-blue-900">
+              {formatearPrecio(item.precio)}
+            </p>
 
-          
+            <button
+              type="button"
+              disabled={cargandoCarrito || !item.disponible}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onAgregarCarrito(item);
+              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition shadow-sm border disabled:opacity-50 ${
+                item.disponible
+                  ? "bg-emerald-400 text-gray-950 hover:bg-emerald-300 border-emerald-500"
+                  : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+              }`}
+              title={
+                item.disponible ? "Agregar al carrito" : "Producto sin stock"
+              }
+            >
+              <ShoppingCartOutlined className="text-lg" />
+            </button>
+          </div>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
@@ -219,8 +244,11 @@ function OfertaWide({ item }) {
 }
 
 function OfertasLanzamientos() {
+  const { token, estaLogueado } = useAuth();
+
   const [ofertas, setOfertas] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [cargandoCarritoId, setCargandoCarritoId] = useState(null);
 
   useEffect(() => {
     const cargarOfertas = async () => {
@@ -276,6 +304,43 @@ function OfertasLanzamientos() {
 
   if (cargando) return null;
 
+  const agregarAlCarrito = async (producto) => {
+    if (!producto.disponible) {
+      message.warning("Este producto no tiene stock disponible");
+      return;
+    }
+
+    if (!estaLogueado || !token) {
+      try {
+        setCargandoCarritoId(producto.id);
+
+        agregarItemCarritoInvitado(producto.id, 1);
+
+        message.success("Producto agregado al carrito");
+      } catch (error) {
+        message.error(error.message || "No se pudo agregar al carrito");
+      } finally {
+        setCargandoCarritoId(null);
+      }
+
+      return;
+    }
+
+    try {
+      setCargandoCarritoId(producto.id);
+
+      await agregarProductoCarrito(token, producto.id);
+
+      message.success("Producto agregado al carrito");
+
+      window.dispatchEvent(new Event("carritoActualizado"));
+    } catch (error) {
+      message.error(error.message || "No se pudo agregar al carrito");
+    } finally {
+      setCargandoCarritoId(null);
+    }
+  };
+
   if (ofertas.length === 0) return null;
 
   return (
@@ -301,7 +366,11 @@ function OfertasLanzamientos() {
               key={`${item.id}-${index}`}
               className="md:col-span-2 lg:col-span-1"
             >
-              <OfertaSmall item={item} />
+              <OfertaSmall
+                item={item}
+                cargandoCarrito={cargandoCarritoId === item.id}
+                onAgregarCarrito={agregarAlCarrito}
+              />
             </div>
           ),
         )}

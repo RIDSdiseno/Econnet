@@ -16,17 +16,19 @@ const router = express.Router();
 
 router.post("/", autenticacionOpcional, crearPedido);
 
-router.get("/", protegerRuta, obtenerPedidos);
-router.get("/:id", protegerRuta, obtenerPedidoPorId);
+router.get("/publico/buscar", buscarPedidoInvitado);
+
 router.get(
   "/publico/:id/documento",
   descargarDocumentoPedidoInvitado,
 );
 
-router.get("/publico/buscar", buscarPedidoInvitado);
-
 router.get(
   "/publico/:id/seguimiento",
   obtenerSeguimientoPedidoInvitado,
 );
+
+router.get("/", protegerRuta, obtenerPedidos);
+router.get("/:id", protegerRuta, obtenerPedidoPorId);
+
 export default router;

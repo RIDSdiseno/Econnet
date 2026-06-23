@@ -45,6 +45,7 @@ export const guardarCarritoInvitado = (items) => {
   );
 
   window.dispatchEvent(new Event("carritoInvitadoActualizado"));
+  window.dispatchEvent(new Event("carritoActualizado"));
 
   return itemsNormalizados;
 };
@@ -94,9 +95,9 @@ export const actualizarCantidadCarritoInvitado = (productoId, cantidad) => {
   const carritoActualizado = carritoActual.map((item) =>
     item.productoId === id
       ? {
-          ...item,
-          cantidad: nuevaCantidad,
-        }
+        ...item,
+        cantidad: nuevaCantidad,
+      }
       : item,
   );
 
@@ -118,6 +119,7 @@ export const eliminarItemCarritoInvitado = (productoId) => {
 export const vaciarCarritoInvitado = () => {
   localStorage.removeItem(CLAVE_CARRITO_INVITADO);
   window.dispatchEvent(new Event("carritoInvitadoActualizado"));
+  window.dispatchEvent(new Event("carritoActualizado"));
 };
 
 export const contarItemsCarritoInvitado = () => {

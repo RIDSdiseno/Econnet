@@ -838,12 +838,22 @@ export async function crearPagoMercadoPago(req, res) {
             response.sandbox_init_point ||
             null;
 
+        console.log("MERCADO PAGO URL GENERADA:", {
+            preferenciaId,
+            initPointHost: response.init_point
+                ? new URL(response.init_point).host
+                : null,
+            sandboxInitPointHost: response.sandbox_init_point
+                ? new URL(response.sandbox_init_point).host
+                : null,
+            urlPagoHost: urlPago ? new URL(urlPago).host : null,
+        });
+
         if (!preferenciaId || !urlPago) {
             throw new Error(
                 "Mercado Pago no devolvió una preferencia válida",
             );
         }
-
         const pagoActualizado = await prisma.pago.update({
             where: {
                 id: pagoCreado.id,
