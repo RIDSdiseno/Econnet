@@ -818,3 +818,49 @@ export const obtenerFiltrosProductosVendidosAdmin = async (
 
   return data;
 };
+
+
+export const obtenerEnviosPedidoAdmin = async (token, pedidoId) => {
+  const respuesta = await fetch(
+    `${API_URL}/admin/envios/pedidos/${pedidoId}`,
+    {
+      headers: obtenerHeaders(token),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudieron obtener los envíos");
+  }
+
+  return data.envios || [];
+};
+
+export const generarEnvioBlueExpressAdmin = async (
+  token,
+  pedidoId,
+  paquete = {},
+) => {
+  const respuesta = await fetch(
+    `${API_URL}/admin/envios/pedidos/${pedidoId}/blue-express`,
+    {
+      method: "POST",
+      headers: obtenerHeaders(token),
+      body: JSON.stringify({
+        pesoGramos: paquete.pesoGramos || 1000,
+        altoCm: paquete.altoCm || 10,
+        anchoCm: paquete.anchoCm || 20,
+        largoCm: paquete.largoCm || 30,
+      }),
+    },
+  );
+
+  const data = await respuesta.json();
+
+  if (!respuesta.ok) {
+    throw new Error(data.mensaje || "No se pudo generar el envío");
+  }
+
+  return data.envio;
+};

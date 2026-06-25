@@ -1,8 +1,6 @@
 import {
   InstagramOutlined,
-  FacebookFilled,
   LinkedinFilled,
-  YoutubeFilled,
   SafetyCertificateOutlined,
   EnvironmentOutlined,
   CustomerServiceOutlined,
@@ -10,9 +8,9 @@ import {
 import { Link } from "react-router-dom";
 
 const redesSociales = {
-  instagram: "#",
-  facebook: "#",
-  linkedin: "#",
+  instagram: "https://www.instagram.com/econnet.cl/",
+  tiktok: "https://www.tiktok.com/@econnet.cl",
+  linkedin: "https://www.linkedin.com/in/econnet-cl-502895402/",
 };
 
 const footerSections = [
@@ -40,7 +38,6 @@ const footerSections = [
         label: "Quiénes somos",
         to: "/quienes-somos",
       },
-
       {
         label: "Términos y condiciones",
         to: "/terminos-condiciones",
@@ -60,8 +57,8 @@ const footerSections = [
         external: true,
       },
       {
-        label: "Facebook",
-        href: redesSociales.facebook,
+        label: "TikTok",
+        href: redesSociales.tiktok,
         external: true,
       },
       {
@@ -122,11 +119,10 @@ function Footer() {
           </h3>
 
           <div className="flex flex-wrap items-center gap-8 text-gray-400 font-semibold text-xl">
-            <span>webpay</span>
-            <span>mercado pago</span>
+            <span>Webpay</span>
+            <span>Mercado Pago</span>
             <span>Santander</span>
             <span>BancoEstado</span>
-            <span className="text-sm">Transferencia Bancaria</span>
           </div>
         </div>
 
@@ -139,7 +135,14 @@ function Footer() {
 
             <div>
               <p className="text-sm text-gray-400">Dirección</p>
-              <p className="text-lg font-semibold">Santiago de Chile</p>
+
+              <p className="text-lg font-semibold">
+                La Concepción 65, oficina 1003
+              </p>
+
+              <p className="text-sm text-gray-400">
+                Providencia, Región Metropolitana
+              </p>
             </div>
           </div>
 
@@ -158,25 +161,28 @@ function Footer() {
                 href={redesSociales.instagram}
                 target="_blank"
                 rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer"
+                aria-label="Instagram Econnet"
+                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer transition"
               >
                 <InstagramOutlined />
               </a>
 
               <a
-                href={redesSociales.facebook}
+                href={redesSociales.tiktok}
                 target="_blank"
                 rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer"
+                aria-label="TikTok Econnet"
+                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer transition"
               >
-                <FacebookFilled />
+                <span className="text-xs font-black">TT</span>
               </a>
 
               <a
                 href={redesSociales.linkedin}
                 target="_blank"
                 rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer"
+                aria-label="LinkedIn Econnet"
+                className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-gray-700 cursor-pointer transition"
               >
                 <LinkedinFilled />
               </a>
@@ -186,15 +192,18 @@ function Footer() {
 
         {/* Copyright */}
         <div className="border-t border-gray-700 mt-10 pt-6 text-center text-sm text-gray-400">
-          Copyright © 2026 ecomer-rids.cl. Todos los derechos reservados.
+          Copyright © 2026 Econnet.cl. Todos los derechos reservados.
         </div>
       </div>
 
-      {/* Botón flotante */}
-      <button className="fixed bottom-6 right-6 bg-gray-800 hover:bg-black text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2">
+      {/* Botón flotante: abre Instagram directamente */}
+      <Link
+        to="/contacto"
+        className="fixed bottom-6 right-6 z-50 bg-gray-800 hover:bg-black text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2 transition"
+      >
         <CustomerServiceOutlined />
         <span className="font-semibold">¿Necesitas ayuda?</span>
-      </button>
+      </Link>
     </footer>
   );
 }

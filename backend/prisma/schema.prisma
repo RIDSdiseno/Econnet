@@ -241,6 +241,7 @@ model Pedido {
   usuario                Usuario?            @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   ticketsSoporte         TicketSoporte[]
   pagos                  Pago[]
+  envios                 EnvioPedido[]
 
   @@map("pedidos")
 }
@@ -436,4 +437,55 @@ model PagoWebhook {
   @@index([pagoId])
   @@index([proveedor, recursoId])
   @@map("pago_webhooks")
+}
+
+model EnvioPedido {
+  id Int @id @default(autoincrement())
+
+  pedidoId Int
+  pedido   Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  courier String @default("blue_express")
+
+  estado   String  @default("pendiente")
+  servicio String?
+
+  ordenServicio     String?
+  numeroSeguimiento String?
+  urlSeguimiento    String?
+  etiquetaUrl       String?
+
+  costo Int?
+
+  pesoGramos Int?
+  altoCm     Int?
+  anchoCm    Int?
+  largoCm    Int?
+
+  origenNombre    String?
+  origenDireccion String?
+  origenComuna    String?
+  origenRegion    String?
+
+  destinoNombre    String?
+  destinoEmail     String?
+  destinoTelefono  String?
+  destinoDireccion String?
+  destinoComuna    String?
+  destinoRegion    String?
+
+  respuestaCourier Json?
+  errorCourier     String?
+
+  fechaGeneracion     DateTime?
+  fechaUltimaConsulta DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pedidoId])
+  @@index([courier])
+  @@index([estado])
+  @@index([numeroSeguimiento])
+  @@map("envios_pedido")
 }

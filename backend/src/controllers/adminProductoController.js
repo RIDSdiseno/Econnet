@@ -31,30 +31,11 @@ const convertirTextoNullable = (valor) => {
     return valor.trim();
 };
 
-const calcularPrecioProducto = ({
-    precio,
-    enOferta,
-    precioNormal,
-    descuento,
-    precioActual = 0,
-}) => {
+const calcularPrecioProducto = ({ precio, precioActual = 0 }) => {
     const precioManual = convertirNumero(precio, precioActual);
 
-    if (!enOferta) {
-        return precioManual;
-    }
-
-    if (!precioNormal || precioNormal <= 0 || !descuento || descuento <= 0) {
-        return precioManual;
-    }
-
-    const precioConDescuento = Math.round(
-        precioNormal * (1 - descuento / 100)
-    );
-
-    return Math.max(precioConDescuento, 0);
+    return Math.max(precioManual, 0);
 };
-
 
 const generarSlug = (texto) => {
     return texto
@@ -135,10 +116,6 @@ export const crearProductoAdmin = async (req, res) => {
 
         const precioCalculado = calcularPrecioProducto({
             precio,
-            enOferta: enOfertaConvertido,
-            precioNormal: precioNormalConvertido,
-            descuento: descuentoConvertido,
-            
         });
         if (!nombre || !slug || !categoriaId || precioCalculado <= 0) {
             return res.status(400).json({
@@ -274,9 +251,6 @@ export const actualizarProductoAdmin = async (req, res) => {
 
         const precioFinal = calcularPrecioProducto({
             precio: precio !== undefined ? precio : productoExiste.precio,
-            enOferta: enOfertaFinal,
-            precioNormal: precioNormalFinal,
-            descuento: descuentoFinal,
             precioActual: productoExiste.precio,
         });
 

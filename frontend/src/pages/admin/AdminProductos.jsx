@@ -58,6 +58,17 @@ function formatearPrecio(valor) {
   }).format(valor || 0);
 }
 
+function calcularDescuentoOferta(precioNormal, precioFinal) {
+  const normal = Number(precioNormal) || 0;
+  const final = Number(precioFinal) || 0;
+
+  if (normal <= 0 || final <= 0 || final >= normal) {
+    return 0;
+  }
+
+  return Math.round(((normal - final) / normal) * 100);
+}
+
 function obtenerImagenesProducto(producto) {
   return (
     producto?.imagenes
@@ -103,9 +114,34 @@ function AdminProductos() {
   );
 
   const [form] = Form.useForm();
+  const enOfertaActiva = Form.useWatch("enOferta", form);
+  const precioFormulario = Form.useWatch("precio", form);
+  const precioNormalFormulario = Form.useWatch("precioNormal", form);
 
   const { token } = useAuth();
   const tokenActual = token || localStorage.getItem("token");
+
+  useEffect(() => {
+    if (!modalAbierto) return;
+
+    if (!enOfertaActiva) {
+      form.setFieldValue("descuento", 0);
+      return;
+    }
+
+    const descuentoCalculado = calcularDescuentoOferta(
+      precioNormalFormulario,
+      precioFormulario,
+    );
+
+    form.setFieldValue("descuento", descuentoCalculado);
+  }, [
+    modalAbierto,
+    enOfertaActiva,
+    precioFormulario,
+    precioNormalFormulario,
+    form,
+  ]);
 
   const cargarDatos = async () => {
     try {
@@ -234,6 +270,19 @@ function AdminProductos() {
   const guardarProducto = async () => {
     try {
       const valores = await form.validateFields();
+      const precioFinal = Number(valores.precio) || 0;
+      const precioNormal = Number(valores.precioNormal) || 0;
+
+      if (valores.enOferta && precioNormal <= precioFinal) {
+        message.warning(
+          "El precio normal debe ser mayor que el precio final para activar una oferta",
+        );
+        return;
+      }
+
+      const descuentoCalculado = valores.enOferta
+        ? calcularDescuentoOferta(precioNormal, precioFinal)
+        : 0;
 
       setGuardando(true);
 
@@ -252,8 +301,8 @@ function AdminProductos() {
         destacado: valores.destacado,
 
         enOferta: valores.enOferta || false,
-        precioNormal: valores.precioNormal || null,
-        descuento: valores.descuento || 0,
+        precioNormal: valores.enOferta ? valores.precioNormal || null : null,
+        descuento: descuentoCalculado,
         etiquetaOferta: valores.etiquetaOferta || "",
         etiquetaEnvio: valores.etiquetaEnvio || "",
         etiquetaDisponibilidad: valores.etiquetaDisponibilidad || "",
@@ -642,7 +691,7 @@ function AdminProductos() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item
-              label="Precio"
+              label="Precio final"
               name="precio"
               rules={[
                 {
@@ -683,6 +732,50 @@ function AdminProductos() {
 
             <Form.Item label="Modelo" name="modelo">
               <Input placeholder="Ej: Odyssey G5" />
+            </Form.Item>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Form.Item
+              label="Categoría"
+              name="categoriaId"
+              rules={[
+                {
+                  required: true,
+                  message: "La categoría es obligatoria",
+                },
+              ]}
+            >
+              <Select
+                placeholder="Selecciona una categoría"
+                options={categorias
+                  .filter((cat) => cat.activo)
+                  .map((cat) => ({
+                    value: cat.id,
+                    label: cat.nombre,
+                  }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Marca"
+              name="marcaId"
+              rules={[
+                {
+                  required: true,
+                  message: "La marca es obligatoria",
+                },
+              ]}
+            >
+              <Select
+                placeholder="Selecciona una marca"
+                options={marcas
+                  .filter((marca) => marca.activo)
+                  .map((marca) => ({
+                    value: marca.id,
+                    label: marca.nombre,
+                  }))}
+              />
             </Form.Item>
           </div>
 
@@ -735,12 +828,17 @@ function AdminProductos() {
                 />
               </Form.Item>
 
-              <Form.Item label="Descuento (%)" name="descuento">
+              <Form.Item
+                label="Descuento (%)"
+                name="descuento"
+                extra="Se calcula automáticamente según el precio normal y el precio final."
+              >
                 <InputNumber
                   min={0}
                   max={100}
+                  disabled
                   className="w-full"
-                  placeholder="Ej: 34"
+                  placeholder="Ej: 21"
                 />
               </Form.Item>
             </div>
@@ -971,50 +1069,6 @@ function AdminProductos() {
               Las especificaciones se guardarán junto con el producto al
               presionar “Guardar producto”.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Form.Item
-              label="Categoría"
-              name="categoriaId"
-              rules={[
-                {
-                  required: true,
-                  message: "La categoría es obligatoria",
-                },
-              ]}
-            >
-              <Select
-                placeholder="Selecciona una categoría"
-                options={categorias
-                  .filter((cat) => cat.activo)
-                  .map((cat) => ({
-                    value: cat.id,
-                    label: cat.nombre,
-                  }))}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Marca"
-              name="marcaId"
-              rules={[
-                {
-                  required: true,
-                  message: "La marca es obligatoria",
-                },
-              ]}
-            >
-              <Select
-                placeholder="Selecciona una marca"
-                options={marcas
-                  .filter((marca) => marca.activo)
-                  .map((marca) => ({
-                    value: marca.id,
-                    label: marca.nombre,
-                  }))}
-              />
-            </Form.Item>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

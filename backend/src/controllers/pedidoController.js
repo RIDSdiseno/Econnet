@@ -558,6 +558,11 @@ export const obtenerPedidos = async (req, res) => {
             createdAt: "asc",
           },
         },
+        envios: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -605,7 +610,12 @@ export const obtenerPedidoPorId = async (req, res) => {
             createdAt: "asc",
           },
         },
-      },
+        envios: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      }
     });
 
     if (!pedido) {
@@ -923,7 +933,12 @@ export const obtenerSeguimientoPedidoInvitado = async (req, res) => {
             createdAt: "asc",
           },
         },
-      },
+        envios: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      }
     });
 
     if (!pedido) {
@@ -981,7 +996,12 @@ export const buscarPedidoInvitado = async (req, res) => {
             createdAt: "asc",
           },
         },
-      },
+        envios: {
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+      }
     });
 
     if (!pedido) {

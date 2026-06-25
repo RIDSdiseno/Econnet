@@ -128,6 +128,7 @@ const formatearMetodoPago = (metodo) => {
   const metodos = {
     transferencia: "Transferencia bancaria",
     webpay: "Webpay / Tarjeta",
+    oneclick: "Oneclick",
     mercadopago: "Mercado Pago",
   };
 
@@ -151,7 +152,6 @@ const formatearTipoEntrega = (tipo) => {
 };
 
 function SeguimientoCompra() {
-
   const [searchParams] = useSearchParams();
   const pedidoIdUrl = searchParams.get("pedidoId");
   const ordenUrl = searchParams.get("orden");
@@ -338,6 +338,9 @@ function SeguimientoCompra() {
 
     return pedido.seguimientos.map((item) => item.estado);
   }, [pedido]);
+
+  const enviosBlueExpress =
+    pedido?.envios?.filter((envio) => envio.courier === "blue_express") || [];
 
   const mostrarBuscador = !pedidoIdUrl && !pedido;
 
@@ -588,6 +591,81 @@ function SeguimientoCompra() {
             </div>
 
             <aside className="space-y-5">
+              {enviosBlueExpress.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                      <TruckOutlined className="text-2xl text-blue-700" />
+                    </div>
+
+                    <div>
+                      <h2 className="text-xl font-black text-gray-900">
+                        Envío Blue Express
+                      </h2>
+
+                      <p className="text-sm text-gray-600">
+                        Información de despacho.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {enviosBlueExpress.map((envio) => (
+                      <div
+                        key={envio.id}
+                        className="border border-gray-200 rounded-2xl p-4 bg-gray-50"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-black text-gray-900">
+                            {envio.servicio || "Blue Express"}
+                          </p>
+
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                            {envio.estado || "generado"}
+                          </span>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-xs font-bold text-gray-500">
+                            Orden de servicio
+                          </p>
+
+                          <p className="font-bold text-gray-900 break-all">
+                            {envio.ordenServicio || "Sin orden registrada"}
+                          </p>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-xs font-bold text-gray-500">
+                            Número de seguimiento
+                          </p>
+
+                          <p className="font-bold text-gray-900 break-all">
+                            {envio.numeroSeguimiento ||
+                              "Sin seguimiento registrado"}
+                          </p>
+                        </div>
+
+                        {envio.urlSeguimiento && (
+                          <a
+                            href={envio.urlSeguimiento}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block mt-5"
+                          >
+                            <Button
+                              block
+                              className="!h-11 !rounded-xl !font-bold"
+                            >
+                              Ver seguimiento Blue Express
+                            </Button>
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-6">
                 <h2 className="text-xl font-black text-gray-900 mb-5">
                   Resumen

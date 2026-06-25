@@ -16,10 +16,13 @@ import {
   ArrowLeftOutlined,
   ReloadOutlined,
   DownloadOutlined,
+  TruckOutlined,
 } from "@ant-design/icons";
 import {
   obtenerPedidoAdminPorId,
   actualizarEstadoPedidoAdmin,
+  obtenerEnviosPedidoAdmin,
+  generarEnvioBlueExpressAdmin,
 } from "../../services/adminApi";
 import { descargarDocumentoPedido } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
@@ -77,8 +80,9 @@ function textoEstado(estado) {
 
 function textoMetodoPago(metodo) {
   if (metodo === "webpay") return "Webpay";
-  if (metodo === "transferencia") return "Transferencia bancaria";
+  if (metodo === "oneclick") return "Oneclick";
   if (metodo === "mercadopago") return "Mercado Pago";
+  if (metodo === "transferencia") return "Transferencia bancaria";
 
   return metodo || "No definido";
 }
@@ -94,6 +98,9 @@ function AdminDetallePedido() {
   const [cargando, setCargando] = useState(false);
   const [actualizando, setActualizando] = useState(false);
   const [descargandoDocumento, setDescargandoDocumento] = useState(false);
+  const [envios, setEnvios] = useState([]);
+  const [cargandoEnvios, setCargandoEnvios] = useState(false);
+  const [generandoEnvio, setGenerandoEnvio] = useState(false);
 
   const cargarPedido = async () => {
     try {
@@ -106,6 +113,20 @@ function AdminDetallePedido() {
       message.error(error.message || "No se pudo cargar el pedido");
     } finally {
       setCargando(false);
+    }
+  };
+
+  const cargarEnviosPedido = async () => {
+    try {
+      setCargandoEnvios(true);
+
+      const data = await obtenerEnviosPedidoAdmin(tokenActual, id);
+
+      setEnvios(data);
+    } catch (error) {
+      message.error(error.message || "No se pudieron cargar los envíos");
+    } finally {
+      setCargandoEnvios(false);
     }
   };
 
@@ -172,8 +193,51 @@ function AdminDetallePedido() {
     }
   };
 
+  const generarEnvioBlueExpress = async () => {
+    if (!pedido?.id) {
+      message.warning("No se encontró el pedido");
+      return;
+    }
+
+    if (pedido.estadoPago !== "aprobado") {
+      message.warning("Solo puedes generar envío para pedidos pagados");
+      return;
+    }
+
+    if (pedido.tipoEntrega !== "despacho") {
+      message.warning("Este pedido es retiro en tienda, no requiere envío");
+      return;
+    }
+
+    if (pedido.estado === "cancelado") {
+      message.warning("No puedes generar envío para un pedido cancelado");
+      return;
+    }
+
+    try {
+      setGenerandoEnvio(true);
+
+      await generarEnvioBlueExpressAdmin(tokenActual, pedido.id, {
+        pesoGramos: 1000,
+        altoCm: 10,
+        anchoCm: 20,
+        largoCm: 30,
+      });
+
+      message.success("Envío Blue Express generado correctamente");
+
+      await cargarPedido();
+      await cargarEnviosPedido();
+    } catch (error) {
+      message.error(error.message || "No se pudo generar el envío");
+    } finally {
+      setGenerandoEnvio(false);
+    }
+  };
+
   useEffect(() => {
     cargarPedido();
+    cargarEnviosPedido();
   }, [id]);
 
   const columnasProductos = [
@@ -218,6 +282,12 @@ function AdminDetallePedido() {
     },
   ];
 
+  const tieneEnvioBlueExpressActivo = envios.some(
+    (envio) =>
+      envio.courier === "blue_express" &&
+      !["cancelado", "error"].includes(envio.estado),
+  );
+
   if (cargando) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
@@ -257,6 +327,18 @@ function AdminDetallePedido() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          {pedido.estadoPago === "aprobado" &&
+            pedido.tipoEntrega === "despacho" &&
+            !tieneEnvioBlueExpressActivo && (
+              <Button
+                icon={<TruckOutlined />}
+                loading={generandoEnvio}
+                onClick={generarEnvioBlueExpress}
+              >
+                Generar envío Blue Express
+              </Button>
+            )}
+
           {pedido.estadoPago === "aprobado" && (
             <Button
               icon={<DownloadOutlined />}
@@ -269,8 +351,11 @@ function AdminDetallePedido() {
 
           <Button
             icon={<ReloadOutlined />}
-            onClick={cargarPedido}
-            loading={cargando}
+            onClick={() => {
+              cargarPedido();
+              cargarEnviosPedido();
+            }}
+            loading={cargando || cargandoEnvios}
           >
             Actualizar
           </Button>
@@ -421,6 +506,84 @@ function AdminDetallePedido() {
         </div>
 
         <div className="space-y-6">
+          <Card className="rounded-2xl shadow-sm">
+            <h2 className="text-lg font-bold mb-4">Envío Blue Express</h2>
+
+            {cargandoEnvios && (
+              <p className="text-gray-500">Cargando envíos...</p>
+            )}
+
+            {!cargandoEnvios && envios.length === 0 && (
+              <div className="text-sm text-gray-600">
+                <p>Este pedido todavía no tiene envío generado.</p>
+
+                {pedido.estadoPago === "aprobado" &&
+                  pedido.tipoEntrega === "despacho" &&
+                  !tieneEnvioBlueExpressActivo && (
+                    <Button
+                      block
+                      icon={<TruckOutlined />}
+                      loading={generandoEnvio}
+                      onClick={generarEnvioBlueExpress}
+                      className="!mt-4 !rounded-xl !font-bold"
+                    >
+                      Generar envío Blue Express
+                    </Button>
+                  )}
+              </div>
+            )}
+
+            {!cargandoEnvios &&
+              envios.length > 0 &&
+              envios.map((envio) => (
+                <div
+                  key={envio.id}
+                  className="border border-gray-200 rounded-xl p-4 mb-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-bold text-gray-900">
+                      {envio.servicio || "Blue Express"}
+                    </p>
+
+                    <Tag color={envio.estado === "generado" ? "green" : "blue"}>
+                      {envio.estado?.toUpperCase() || "SIN ESTADO"}
+                    </Tag>
+                  </div>
+
+                  <Divider className="!my-3" />
+
+                  <p className="text-sm text-gray-500">Orden de servicio</p>
+                  <p className="font-bold break-all">
+                    {envio.ordenServicio || "Sin orden"}
+                  </p>
+
+                  <p className="text-sm text-gray-500 mt-3">
+                    Número de seguimiento
+                  </p>
+                  <p className="font-bold break-all">
+                    {envio.numeroSeguimiento || "Sin seguimiento"}
+                  </p>
+
+                  <p className="text-sm text-gray-500 mt-3">Costo</p>
+                  <p className="font-bold">
+                    {formatearPrecio(envio.costo || 0)}
+                  </p>
+
+                  {envio.urlSeguimiento && (
+                    <a
+                      href={envio.urlSeguimiento}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block mt-4"
+                    >
+                      <Button block className="!rounded-xl !font-bold">
+                        Ver seguimiento
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              ))}
+          </Card>
           <Card className="rounded-2xl shadow-sm">
             <h2 className="text-lg font-bold mb-4">Resumen</h2>
 

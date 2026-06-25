@@ -55,21 +55,12 @@ function limpiarNombreArchivo(valor = "") {
 function obtenerNombreDocumento(pedido) {
   const numero = limpiarNombreArchivo(pedido.numero || pedido.id);
 
-  if (pedido.documento === "factura") {
-    return `Factura-Proforma-${numero}.pdf`;
-  }
-
-  return `Boleta-${numero}.pdf`;
+  return `Comprobante-de-compra-${numero}.pdf`;
 }
 
-function obtenerTituloDocumento(pedido) {
-  if (pedido.documento === "factura") {
-    return "Factura proforma";
-  }
-
+function obtenerTituloDocumento() {
   return "Comprobante de compra";
 }
-
 function construirProductosHtml(items = []) {
   return items
     .map(
