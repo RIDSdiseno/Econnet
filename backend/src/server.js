@@ -53,6 +53,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const origenesPermitidos = [
   "http://localhost:5173",
   "https://econnet-store.netlify.app",
+  "https://econnet.cl",
   process.env.FRONTEND_URL,
 ]
   .filter(Boolean)

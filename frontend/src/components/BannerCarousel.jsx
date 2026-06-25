@@ -87,12 +87,7 @@ function BannerCarousel() {
                   </div>
                 </div>
 
-                <div className="absolute bottom-5 right-5 hidden md:block">
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-5 py-4 text-white shadow-lg">
-                    <p className="text-xs text-gray-200">Compra segura</p>
-                    <p className="text-lg font-black">Econnet</p>
-                  </div>
-                </div>
+                
               </div>
             </div>
           ))}
