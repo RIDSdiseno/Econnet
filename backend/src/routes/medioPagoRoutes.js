@@ -6,11 +6,17 @@ import {
   eliminarMedioPago,
 } from "../controllers/medioPagoController.js";
 import { protegerRuta } from "../middlewares/authMiddleware.js";
+import { pagosRateLimiter } from "../middlewares/rateLimitMiddleware.js";
 
 const router = express.Router();
 
 router.get("/", protegerRuta, obtenerMediosPago);
-router.post("/oneclick/iniciar", protegerRuta, iniciarInscripcionMedioPago);
+router.post(
+  "/oneclick/iniciar",
+  pagosRateLimiter,
+  protegerRuta,
+  iniciarInscripcionMedioPago,
+);
 router.all("/oneclick/retorno", retornoInscripcionMedioPago);
 router.delete("/:id", protegerRuta, eliminarMedioPago);
 

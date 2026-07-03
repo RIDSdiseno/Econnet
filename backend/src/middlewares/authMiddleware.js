@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
+import { JWT_SECRET } from "../config/jwt.js";
 
 const CAMPOS_USUARIO = {
     id: true,
@@ -19,7 +20,7 @@ const CAMPOS_USUARIO = {
 };
 
 async function obtenerUsuarioDesdeToken(token) {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     const usuario = await prisma.usuario.findUnique({
         where: {

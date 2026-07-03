@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
+import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/jwt.js";
 
 
 const generarToken = (usuario) => {
@@ -10,9 +11,9 @@ const generarToken = (usuario) => {
       email: usuario.email,
       rol: usuario.rol,
     },
-    process.env.JWT_SECRET,
+    JWT_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn: JWT_EXPIRES_IN,
     }
   );
 };

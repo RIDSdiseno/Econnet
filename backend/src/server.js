@@ -47,6 +47,9 @@ import adminProductosVendidosRoutes from "./routes/adminProductosVendidosRoutes.
 import adminEnvioRoutes from "./routes/adminEnvioRoutes.js";
 
 const app = express();
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
 const PORT = Number(process.env.PORT) || 3000;
 

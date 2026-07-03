@@ -14,16 +14,28 @@ import {
   retornoMercadoPago,
   webhookMercadoPago,
 } from "../controllers/mercadoPagoController.js";
+import { pagosRateLimiter } from "../middlewares/rateLimitMiddleware.js";
 
 const router = express.Router();
 
-router.post("/webpay/crear", autenticacionOpcional, crearPagoWebpay);
+router.post(
+  "/webpay/crear",
+  pagosRateLimiter,
+  autenticacionOpcional,
+  crearPagoWebpay,
+);
 router.all("/webpay/retorno", retornoWebpay);
 
-router.post("/oneclick/crear", protegerRuta, crearPagoOneclick);
+router.post(
+  "/oneclick/crear",
+  pagosRateLimiter,
+  protegerRuta,
+  crearPagoOneclick,
+);
 
 router.post(
   "/mercadopago/crear",
+  pagosRateLimiter,
   autenticacionOpcional,
   crearPagoMercadoPago,
 );

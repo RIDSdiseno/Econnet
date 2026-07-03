@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import prisma from "../config/prisma.js";
+import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/jwt.js";
 
 const {
     MICROSOFT_CLIENT_ID,
@@ -10,7 +11,6 @@ const {
     MICROSOFT_CLIENT_SECRET,
     MICROSOFT_REDIRECT_URI,
     FRONTEND_URL,
-    JWT_SECRET,
 } = process.env;
 
 function validarVariablesMicrosoft() {
@@ -20,8 +20,6 @@ function validarVariablesMicrosoft() {
     if (!MICROSOFT_TENANT_ID) faltantes.push("MICROSOFT_TENANT_ID");
     if (!MICROSOFT_CLIENT_SECRET) faltantes.push("MICROSOFT_CLIENT_SECRET");
     if (!MICROSOFT_REDIRECT_URI) faltantes.push("MICROSOFT_REDIRECT_URI");
-    if (!JWT_SECRET) faltantes.push("JWT_SECRET");
-
     if (faltantes.length > 0) {
         throw new Error(`Faltan variables de entorno: ${faltantes.join(", ")}`);
     }
@@ -47,7 +45,7 @@ function generarTokenEconnet(usuario) {
         },
         JWT_SECRET,
         {
-            expiresIn: "7d",
+            expiresIn: JWT_EXPIRES_IN,
         }
     );
 }

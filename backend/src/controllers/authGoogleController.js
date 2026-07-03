@@ -3,13 +3,13 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import prisma from "../config/prisma.js";
+import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/jwt.js";
 
 const {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URI,
   FRONTEND_URL,
-  JWT_SECRET,
 } = process.env;
 
 function validarVariablesGoogle() {
@@ -18,8 +18,6 @@ function validarVariablesGoogle() {
   if (!GOOGLE_CLIENT_ID) faltantes.push("GOOGLE_CLIENT_ID");
   if (!GOOGLE_CLIENT_SECRET) faltantes.push("GOOGLE_CLIENT_SECRET");
   if (!GOOGLE_REDIRECT_URI) faltantes.push("GOOGLE_REDIRECT_URI");
-  if (!JWT_SECRET) faltantes.push("JWT_SECRET");
-
   if (faltantes.length > 0) {
     throw new Error(`Faltan variables de entorno: ${faltantes.join(", ")}`);
   }
@@ -43,7 +41,7 @@ function generarTokenEconnet(usuario) {
     },
     JWT_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn: JWT_EXPIRES_IN,
     }
   );
 }

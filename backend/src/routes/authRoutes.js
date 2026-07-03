@@ -7,11 +7,15 @@ import {
   cambiarPassword,
 } from "../controllers/authController.js";
 import { protegerRuta } from "../middlewares/authMiddleware.js";
+import {
+  authRateLimiter,
+  registroRateLimiter,
+} from "../middlewares/rateLimitMiddleware.js";
 
 const router = express.Router();
 
-router.post("/registro", registrarUsuario);
-router.post("/login", loginUsuario);
+router.post("/registro", registroRateLimiter, registrarUsuario);
+router.post("/login", authRateLimiter, loginUsuario);
 router.get("/perfil", protegerRuta, obtenerPerfil);
 router.put("/perfil", protegerRuta, actualizarPerfil);
 router.put("/password", protegerRuta, cambiarPassword);
