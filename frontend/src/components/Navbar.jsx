@@ -13,46 +13,28 @@ import { obtenerCarrito } from "../services/api";
 
 const categoriasRapidas = [
   {
-    key: "1",
-    label: (
-      <Link to={`/productos?categoria=${encodeURIComponent("Monitores")}`}>
-        Monitores
-      </Link>
-    ),
+    key: "monitores",
+    label: <Link to="/productos?categoria=monitores">Monitores</Link>,
   },
   {
-    key: "2",
-    label: (
-      <Link to={`/productos?categoria=${encodeURIComponent("AIO")}`}>AIO</Link>
-    ),
+    key: "aio",
+    label: <Link to="/productos?categoria=aio">AIO</Link>,
   },
   {
-    key: "3",
-    label: (
-      <Link to={`/productos?categoria=${encodeURIComponent("Notebook")}`}>
-        Notebook
-      </Link>
-    ),
+    key: "notebooks",
+    label: <Link to="/productos?categoria=notebooks">Notebooks</Link>,
   },
   {
-    key: "4",
+    key: "camaras-de-seguridad",
     label: (
-      <Link
-        to={`/productos?categoria=${encodeURIComponent(
-          "Cámara de seguridad",
-        )}`}
-      >
+      <Link to="/productos?categoria=camaras-de-seguridad">
         Cámaras de seguridad
       </Link>
     ),
   },
   {
-    key: "5",
-    label: (
-      <Link to={`/productos?categoria=${encodeURIComponent("Almacenamiento")}`}>
-        Almacenamiento
-      </Link>
-    ),
+    key: "almacenamiento",
+    label: <Link to="/productos?categoria=almacenamiento">Almacenamiento</Link>,
   },
 ];
 
@@ -107,13 +89,7 @@ function Navbar() {
     };
 
     cargarCantidadCarrito();
-  }, [
-    token,
-    estaLogueado,
-    cargandoAuth,
-    location.pathname,
-    location.search,
-  ]);
+  }, [token, estaLogueado, cargandoAuth, location.pathname, location.search]);
 
   const menuUsuario = [
     {

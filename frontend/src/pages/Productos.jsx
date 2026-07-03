@@ -71,6 +71,23 @@ function normalizarTexto(texto = "") {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function crearSlugFiltro(texto = "") {
+  return normalizarTexto(texto)
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+function buscarValorPorSlug(lista = [], valorUrl = "") {
+  if (!valorUrl) return null;
+
+  return (
+    lista.find((item) => crearSlugFiltro(item) === crearSlugFiltro(valorUrl)) ||
+    null
+  );
+}
+function coincideFiltroTexto(valorProducto, valorFiltro) {
+  return crearSlugFiltro(valorProducto) === crearSlugFiltro(valorFiltro);
+}
+
 function SidebarFiltros({
   categorias = [],
   marcas = [],
@@ -272,9 +289,11 @@ function ProductoCard({
             </span>
           )}
 
-          <span className="text-xs text-gray-400 line-through">
-            {formatearPrecio(producto.precioNormal)}
-          </span>
+          {producto.precioNormal && producto.precioNormal > producto.precio && (
+            <span className="text-xs text-gray-400 line-through">
+              {formatearPrecio(producto.precioNormal)}
+            </span>
+          )}
         </div>
 
         <div className="mt-2 flex items-end justify-between gap-2">
@@ -353,15 +372,25 @@ function Productos() {
             producto.imagenes?.[0]?.url ||
             "/img/productos/producto.png";
 
+          const precioFinal = Number(producto.precio || 0);
+          const precioNormal = Number(producto.precioNormal || 0);
+          const descuento = Number(producto.descuento || 0);
+
+          const tieneOferta =
+            producto.enOferta === true ||
+            descuento > 0 ||
+            (precioNormal > 0 && precioNormal > precioFinal);
+
           return {
             ...producto,
             categoria: producto.categoria?.nombre || "",
             marca: producto.marca?.nombre || "Sin marca",
             imagen: imagenPrincipal,
             disponible: producto.stock > 0,
-            oferta: false,
-            precioNormal: producto.precio,
-            descuento: 0,
+            oferta: tieneOferta,
+            precio: precioFinal,
+            precioNormal: precioNormal > precioFinal ? precioNormal : null,
+            descuento,
           };
         });
 
@@ -403,21 +432,23 @@ function Productos() {
 
   useEffect(() => {
     if (categoriaUrl) {
-      setCategoriasSeleccionadas([categoriaUrl]);
-    }
+      const categoriaReal = buscarValorPorSlug(categorias, categoriaUrl);
 
-    if (!categoriaUrl) {
+      setCategoriasSeleccionadas([categoriaReal || categoriaUrl]);
+    } else {
       setCategoriasSeleccionadas([]);
     }
 
     if (marcaUrl) {
-      setMarcasSeleccionadas([marcaUrl]);
-    }
+      const nombresMarcas = marcas.map((marca) => marca.nombre);
+      const marcaReal = buscarValorPorSlug(nombresMarcas, marcaUrl);
 
-    if (!marcaUrl) {
+      setMarcasSeleccionadas([marcaReal || marcaUrl]);
+    } else {
       setMarcasSeleccionadas([]);
     }
   }, [categoriaUrl, marcaUrl, categorias, marcas]);
+
   const productosFiltrados = useMemo(() => {
     let resultado = [...productos];
     const busqueda = normalizarTexto(busquedaUrl);
@@ -439,13 +470,17 @@ function Productos() {
     }
     if (categoriasSeleccionadas.length > 0) {
       resultado = resultado.filter((producto) =>
-        categoriasSeleccionadas.includes(producto.categoria),
+        categoriasSeleccionadas.some((categoriaFiltro) =>
+          coincideFiltroTexto(producto.categoria, categoriaFiltro),
+        ),
       );
     }
 
     if (marcasSeleccionadas.length > 0) {
       resultado = resultado.filter((producto) =>
-        marcasSeleccionadas.includes(producto.marca),
+        marcasSeleccionadas.some((marcaFiltro) =>
+          coincideFiltroTexto(producto.marca, marcaFiltro),
+        ),
       );
     }
 
