@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
@@ -7,6 +8,17 @@ function validarEmail(email) {
 
 function generarCodigoDescuento() {
   return "BIENVENIDA10";
+}
+
+function generarUnsubscribeToken() {
+  return randomBytes(32).toString("hex");
+}
+
+function crearDatosTokenDesuscripcion() {
+  return {
+    unsubscribeToken: generarUnsubscribeToken(),
+    unsubscribeTokenCreatedAt: new Date(),
+  };
 }
 
 export const suscribirseNewsletter = async (req, res) => {
@@ -43,6 +55,8 @@ export const suscribirseNewsletter = async (req, res) => {
           },
           data: {
             activo: true,
+            fechaDesuscripcion: null,
+            ...crearDatosTokenDesuscripcion(),
             codigoDescuento:
               suscriptorExistente.codigoDescuento || generarCodigoDescuento(),
             descuentoPorcentaje: suscriptorExistente.descuentoPorcentaje || 10,
@@ -54,6 +68,15 @@ export const suscribirseNewsletter = async (req, res) => {
           mensaje: "Suscripción reactivada correctamente",
           codigoDescuento: suscriptorReactivado.codigoDescuento,
           descuentoPorcentaje: suscriptorReactivado.descuentoPorcentaje,
+        });
+      }
+
+      if (!suscriptorExistente.unsubscribeToken) {
+        await prisma.newsletterSuscriptor.update({
+          where: {
+            email: emailNormalizado,
+          },
+          data: crearDatosTokenDesuscripcion(),
         });
       }
 
@@ -73,6 +96,7 @@ export const suscribirseNewsletter = async (req, res) => {
         codigoDescuento: generarCodigoDescuento(),
         descuentoPorcentaje: 10,
         usado: false,
+        ...crearDatosTokenDesuscripcion(),
       },
     });
 
@@ -85,9 +109,64 @@ export const suscribirseNewsletter = async (req, res) => {
   } catch (error) {
     logger.error("Error al suscribirse al newsletter:", serializeError(error));
 
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        ok: false,
+        mensaje: "No se pudo completar la suscripción. Intenta nuevamente.",
+      });
+    }
+
     return res.status(500).json({
       ok: false,
       mensaje: "Error al registrar la suscripción",
+    });
+  }
+};
+
+export const desuscribirNewsletter = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    const suscriptor = await prisma.newsletterSuscriptor.findUnique({
+      where: {
+        unsubscribeToken: token,
+      },
+    });
+
+    if (!suscriptor) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El enlace de desuscripción no es válido",
+      });
+    }
+
+    if (!suscriptor.activo) {
+      return res.json({
+        ok: true,
+        mensaje: "Esta dirección ya estaba desuscrita",
+      });
+    }
+
+    await prisma.newsletterSuscriptor.update({
+      where: {
+        id: suscriptor.id,
+      },
+      data: {
+        activo: false,
+        fechaDesuscripcion: new Date(),
+      },
+    });
+
+    return res.json({
+      ok: true,
+      mensaje: "Te has desuscrito correctamente del newsletter",
+    });
+  } catch (error) {
+    logger.error("Error al desuscribir newsletter:", serializeError(error));
+
+    return res.status(500).json({
+      ok: false,
+      mensaje: "No se pudo procesar la desuscripción",
     });
   }
 };
