@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 const calcularResumenCarrito = (items) => {
@@ -49,7 +50,7 @@ export const obtenerCarrito = async (req, res) => {
       resumen: calcularResumenCarrito(items),
     });
   } catch (error) {
-    console.error("Error al obtener carrito:", error);
+    logger.error("Error al obtener carrito:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -170,7 +171,7 @@ export const agregarProductoCarrito = async (req, res) => {
       item: nuevoItem,
     });
   } catch (error) {
-    console.error("Error al agregar producto al carrito:", error);
+    logger.error("Error al agregar producto al carrito:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -270,7 +271,7 @@ export const actualizarCantidadCarrito = async (req, res) => {
       item: itemActualizado,
     });
   } catch (error) {
-    console.error("Error al actualizar cantidad:", error);
+    logger.error("Error al actualizar cantidad:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -322,7 +323,7 @@ export const eliminarProductoCarrito = async (req, res) => {
       mensaje: "Producto eliminado del carrito",
     });
   } catch (error) {
-    console.error("Error al eliminar producto del carrito:", error);
+    logger.error("Error al eliminar producto del carrito:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -345,7 +346,7 @@ export const vaciarCarrito = async (req, res) => {
       mensaje: "Carrito vaciado correctamente",
     });
   } catch (error) {
-    console.error("Error al vaciar carrito:", error);
+    logger.error("Error al vaciar carrito:", serializeError(error));
 
     res.status(500).json({
       ok: false,

@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerFavoritos = async (req, res) => {
@@ -29,7 +30,7 @@ export const obtenerFavoritos = async (req, res) => {
       favoritos,
     });
   } catch (error) {
-    console.error("Error al obtener favoritos:", error);
+    logger.error("Error al obtener favoritos:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -107,7 +108,7 @@ export const agregarFavorito = async (req, res) => {
       favorito,
     });
   } catch (error) {
-    console.error("Error al agregar favorito:", error);
+    logger.error("Error al agregar favorito:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -159,7 +160,7 @@ export const eliminarFavorito = async (req, res) => {
       mensaje: "Producto eliminado de favoritos",
     });
   } catch (error) {
-    console.error("Error al eliminar favorito:", error);
+    logger.error("Error al eliminar favorito:", serializeError(error));
 
     res.status(500).json({
       ok: false,

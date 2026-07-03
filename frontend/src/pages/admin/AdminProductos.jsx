@@ -337,7 +337,9 @@ function AdminProductos() {
           respuestaCrear?.productoCreado?.id;
 
         if (!productoIdGuardado) {
-          console.log("Respuesta crear producto:", respuestaCrear);
+          if (import.meta.env.DEV) {
+            console.log("Respuesta crear producto:", respuestaCrear);
+          }
           throw new Error("El producto se creó, pero no se recibió su ID");
         }
       }

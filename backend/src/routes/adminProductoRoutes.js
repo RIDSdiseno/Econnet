@@ -1,6 +1,11 @@
 import express from "express";
 import { protegerRuta } from "../middlewares/authMiddleware.js";
 import { soloAdmin } from "../middlewares/adminMiddleware.js";
+import { validateRequest } from "../middlewares/validateRequest.js";
+import {
+    actualizarProductoSchema,
+    crearProductoSchema,
+} from "../validations/productoSchemas.js";
 
 import {
     obtenerProductosAdmin,
@@ -18,8 +23,20 @@ import {
 const router = express.Router();
 
 router.get("/", protegerRuta, soloAdmin, obtenerProductosAdmin);
-router.post("/", protegerRuta, soloAdmin, crearProductoAdmin);
-router.put("/:id", protegerRuta, soloAdmin, actualizarProductoAdmin);
+router.post(
+    "/",
+    protegerRuta,
+    soloAdmin,
+    validateRequest({ body: crearProductoSchema }),
+    crearProductoAdmin
+);
+router.put(
+    "/:id",
+    protegerRuta,
+    soloAdmin,
+    validateRequest({ body: actualizarProductoSchema }),
+    actualizarProductoAdmin
+);
 
 router.post(
     "/:id/imagenes",

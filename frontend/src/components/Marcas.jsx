@@ -48,7 +48,9 @@ function Marcas() {
 
         setMarcasPrincipales(marcasHome);
       } catch (error) {
-        console.error("Error al cargar marcas:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar marcas:", error);
+        }
       } finally {
         setCargando(false);
       }

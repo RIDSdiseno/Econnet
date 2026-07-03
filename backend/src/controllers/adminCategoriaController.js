@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 const generarSlug = (texto) => {
@@ -59,7 +60,7 @@ export const obtenerCategoriasAdmin = async (req, res) => {
             categorias,
         });
     } catch (error) {
-        console.error("Error al obtener categorías admin:", error);
+        logger.error("Error al obtener categorías admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -116,7 +117,7 @@ export const crearCategoriaAdmin = async (req, res) => {
             categoria: categoriaCreada,
         });
     } catch (error) {
-        console.error("Error al crear categoría admin:", error);
+        logger.error("Error al crear categoría admin:", serializeError(error));
 
         if (error.code === "P2002") {
             return res.status(400).json({
@@ -201,7 +202,7 @@ export const actualizarCategoriaAdmin = async (req, res) => {
             categoria: categoriaActualizada,
         });
     } catch (error) {
-        console.error("Error al actualizar categoría admin:", error);
+        logger.error("Error al actualizar categoría admin:", serializeError(error));
 
         if (error.code === "P2002") {
             return res.status(400).json({

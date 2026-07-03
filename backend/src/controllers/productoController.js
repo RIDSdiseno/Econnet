@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerProductos = async (req, res) => {
@@ -31,7 +32,7 @@ export const obtenerProductos = async (req, res) => {
             productos,
         });
     } catch (error) {
-        console.error("Error al obtener productos:", error);
+        logger.error("Error al obtener productos:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -76,7 +77,7 @@ export const obtenerProductoPorId = async (req, res) => {
             producto,
         });
     } catch (error) {
-        console.error("Error al obtener producto:", error);
+        logger.error("Error al obtener producto:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -185,7 +186,7 @@ export const crearProducto = async (req, res) => {
             producto: nuevoProducto,
         });
     } catch (error) {
-        console.error("Error al crear producto:", error);
+        logger.error("Error al crear producto:", serializeError(error));
 
         if (error.code === "P2002" && error.meta?.target?.includes("sku")) {
             return res.status(400).json({
@@ -338,7 +339,7 @@ export const editarProducto = async (req, res) => {
             producto: productoEditado,
         });
     } catch (error) {
-        console.error("Error al editar producto:", error);
+        logger.error("Error al editar producto:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -388,7 +389,7 @@ export const desactivarProducto = async (req, res) => {
             producto: productoDesactivado,
         });
     } catch (error) {
-        console.error("Error al desactivar producto:", error);
+        logger.error("Error al desactivar producto:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -425,7 +426,7 @@ export const obtenerProductosAdmin = async (req, res) => {
             productos,
         });
     } catch (error) {
-        console.error("Error al obtener productos admin:", error);
+        logger.error("Error al obtener productos admin:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -490,7 +491,7 @@ export const reactivarProducto = async (req, res) => {
             producto: productoReactivado,
         });
     } catch (error) {
-        console.error("Error al reactivar producto:", error);
+        logger.error("Error al reactivar producto:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -570,7 +571,7 @@ export const agregarImagenProducto = async (req, res) => {
             imagen: nuevaImagen,
         });
     } catch (error) {
-        console.error("Error al agregar imagen:", error);
+        logger.error("Error al agregar imagen:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -646,7 +647,7 @@ export const actualizarImagenProducto = async (req, res) => {
             imagen: imagenActualizada,
         });
     } catch (error) {
-        console.error("Error al actualizar imagen:", error);
+        logger.error("Error al actualizar imagen:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -694,7 +695,7 @@ export const eliminarImagenProducto = async (req, res) => {
             imagenEliminada: imagenExiste,
         });
     } catch (error) {
-        console.error("Error al eliminar imagen:", error);
+        logger.error("Error al eliminar imagen:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -737,7 +738,7 @@ export const obtenerProductosDestacados = async (req, res) => {
       productos,
     });
   } catch (error) {
-    console.error("Error al obtener productos destacados:", error);
+    logger.error("Error al obtener productos destacados:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 function validarEmail(email) {
@@ -82,7 +83,7 @@ export const suscribirseNewsletter = async (req, res) => {
       descuentoPorcentaje: nuevoSuscriptor.descuentoPorcentaje,
     });
   } catch (error) {
-    console.error("Error al suscribirse al newsletter:", error);
+    logger.error("Error al suscribirse al newsletter:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

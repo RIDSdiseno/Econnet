@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import { ConfidentialClientApplication } from "@azure/msal-node";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -76,7 +77,10 @@ export async function iniciarMicrosoft(req, res) {
 
         return res.redirect(authUrl);
     } catch (error) {
-        console.error("Error iniciando sesión con Microsoft:", error.message);
+        logger.error(
+            "Error iniciando sesión con Microsoft",
+            serializeError(error),
+        );
 
         return res.redirect(
             `${FRONTEND_URL || "http://localhost:5173"}/login?error=microsoft_config`
@@ -163,10 +167,10 @@ export async function callbackMicrosoft(req, res) {
             `${FRONTEND_URL || "http://localhost:5173"}/auth/callback?${params.toString()}`
         );
     } catch (error) {
-        console.error("Error en callback Microsoft completo:");
-        console.error("Mensaje:", error.message);
-        console.error("Código:", error.errorCode || error.code);
-        console.error("Detalle:", error.errorMessage || error.response?.data);
+        logger.error("Error en callback Microsoft", {
+            ...serializeError(error),
+            code: error.errorCode || error.code,
+        });
 
         const mensajeSeguro =
             error.message || "No se pudo iniciar sesión con Microsoft";

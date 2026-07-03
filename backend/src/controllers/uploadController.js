@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import cloudinary from "../config/cloudinary.js";
 
 const subirBufferACloudinary = (buffer, carpeta) => {
@@ -48,7 +49,7 @@ export const subirImagenProducto = async (req, res) => {
       "Imagen de producto subida correctamente",
     );
   } catch (error) {
-    console.error("Error al subir imagen de producto:", error);
+    logger.error("Error al subir imagen de producto:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -78,7 +79,7 @@ export const subirImagenMarca = async (req, res) => {
       "Imagen de marca subida correctamente",
     );
   } catch (error) {
-    console.error("Error al subir imagen de marca:", error);
+    logger.error("Error al subir imagen de marca:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -108,7 +109,7 @@ export const subirImagenAnuncio = async (req, res) => {
       "Imagen de anuncio subida correctamente",
     );
   } catch (error) {
-    console.error("Error al subir imagen de anuncio:", error);
+    logger.error("Error al subir imagen de anuncio:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -138,7 +139,7 @@ export const subirImagenCategoria = async (req, res) => {
       "Imagen de categoría subida correctamente",
     );
   } catch (error) {
-    console.error("Error al subir imagen de categoría:", error);
+    logger.error("Error al subir imagen de categoría:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

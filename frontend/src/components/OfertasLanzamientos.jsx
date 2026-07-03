@@ -292,7 +292,9 @@ function OfertasLanzamientos() {
 
         setOfertas(productosAdaptados);
       } catch (error) {
-        console.error("Error al cargar ofertas:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar ofertas:", error);
+        }
         setOfertas([]);
       } finally {
         setCargando(false);

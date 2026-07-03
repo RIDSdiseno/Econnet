@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 function numeroPositivo(valor, valorPredeterminado) {
@@ -554,7 +555,7 @@ export const obtenerProductosVendidosDetalle = async (
       },
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al obtener ventas agrupadas por pedido:",
       error,
     );
@@ -789,7 +790,7 @@ export const obtenerResumenProductosVendidos = async (
       },
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al obtener resumen de productos vendidos:",
       error,
     );
@@ -901,7 +902,7 @@ export const obtenerFiltrosProductosVendidos = async (req, res) => {
       marcas,
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al obtener filtros de productos vendidos:",
       error,
     );

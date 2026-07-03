@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import { obtenerInfoEstadoPedido } from "../utils/estadosPedido.js";
 
@@ -116,12 +117,12 @@ export async function cancelarPedidosVencidos() {
         if (cancelado) {
           cancelados += 5;
 
-          console.log(
+          logger.info(
             `Pedido ${pedido.numero} cancelado automáticamente por vencimiento`,
           );
         }
       } catch (error) {
-        console.error(
+        logger.error(
           `Error al cancelar el pedido vencido ${pedido.numero}:`,
           error,
         );
@@ -140,7 +141,7 @@ export async function cancelarPedidosVencidos() {
 
 export function iniciarRevisionPedidosVencidos() {
   if (process.env.PEDIDOS_VENCIDOS_ENABLED !== "true") {
-    console.log(
+    logger.info(
       "Cancelación automática de pedidos vencidos desactivada",
     );
     return null;
@@ -164,12 +165,12 @@ export function iniciarRevisionPedidosVencidos() {
       const resultado = await cancelarPedidosVencidos();
 
       if (resultado.cancelados > 0) {
-        console.log(
+        logger.info(
           `Revisión finalizada: ${resultado.cancelados} pedido(s) cancelado(s)`,
         );
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "Error durante la revisión de pedidos vencidos:",
         error,
       );
@@ -187,7 +188,7 @@ export function iniciarRevisionPedidosVencidos() {
   // Permite cerrar Node normalmente si este intervalo es lo único activo.
   intervaloRevision.unref?.();
 
-  console.log(
+  logger.info(
     `Revisión de pedidos vencidos activa cada ${minutosRevision} minuto(s)`,
   );
 

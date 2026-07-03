@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import { crearEnvioBlueExpress } from "../services/blueExpressService.js";
 
@@ -85,7 +86,7 @@ export const obtenerEnviosPedidoAdmin = async (req, res) => {
       envios,
     });
   } catch (error) {
-    console.error("Error al obtener envíos del pedido:", error);
+    logger.error("Error al obtener envíos del pedido:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -269,7 +270,7 @@ export const generarEnvioBlueExpressAdmin = async (req, res) => {
       envio,
     });
   } catch (error) {
-    console.error("Error al generar envío Blue Express:", error);
+    logger.error("Error al generar envío Blue Express:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

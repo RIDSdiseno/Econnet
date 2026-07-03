@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerCategorias = async (req, res) => {
@@ -16,7 +17,7 @@ export const obtenerCategorias = async (req, res) => {
       categorias,
     });
   } catch (error) {
-    console.error("Error al obtener categorías:", error);
+    logger.error("Error al obtener categorías:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -50,7 +51,7 @@ export const obtenerCategoriaPorId = async (req, res) => {
       categoria,
     });
   } catch (error) {
-    console.error("Error al obtener categoría:", error);
+    logger.error("Error al obtener categoría:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -105,7 +106,7 @@ export const editarCategoria = async (req, res) => {
       categoria: categoriaActualizada,
     });
   } catch (error) {
-    console.error("Error al editar categoría:", error);
+    logger.error("Error al editar categoría:", serializeError(error));
 
     res.status(500).json({
       ok: false,

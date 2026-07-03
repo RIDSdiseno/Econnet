@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import { randomUUID } from "node:crypto";
 
 import prisma from "../config/prisma.js";
@@ -51,7 +52,7 @@ function crearSeguimientoEstado(estado, detalleExtra = "") {
 
 function enviarDocumentoMercadoPagoEnSegundoPlano(pedidoId) {
     if (process.env.EMAIL_ENABLED !== "true") {
-        console.log(
+        logger.info(
             `Envío de correo desactivado para el pedido ${pedidoId}`,
         );
         return;
@@ -60,21 +61,21 @@ function enviarDocumentoMercadoPagoEnSegundoPlano(pedidoId) {
     enviarDocumentoPedidoPorCorreo(pedidoId)
         .then((resultado) => {
             if (resultado?.omitido) {
-                console.log(
+                logger.info(
                     `Correo del pedido ${pedidoId} omitido:`,
                     resultado.mensaje,
                 );
                 return;
             }
 
-            console.log(
+            logger.info(
                 `Correo del pedido ${pedidoId} enviado correctamente`,
             );
         })
         .catch((error) => {
-            console.error(
-                `No se pudo enviar el documento del pedido ${pedidoId}:`,
-                error.message,
+            logger.error(
+                `No se pudo enviar el documento del pedido ${pedidoId}`,
+                serializeError(error),
             );
         });
 }
@@ -136,6 +137,42 @@ function obtenerPaymentIdDesdeQuery(query) {
         normalizarIdMercadoPago(query?.payment_id) ||
         normalizarIdMercadoPago(query?.collection_id)
     );
+}
+
+function crearResumenResultadoMercadoPago(resultado) {
+    return {
+        estado: resultado?.estado || null,
+        confirmado: resultado?.confirmado ?? null,
+        pedidoId: resultado?.pedidoId || null,
+        pagoId: resultado?.pagoId || null,
+        pagoProveedorId: resultado?.pagoProveedorId || null,
+        mensaje: resultado?.mensaje || null,
+    };
+}
+
+function crearResumenQueryMercadoPago(query) {
+    return {
+        type: query?.type || query?.topic || null,
+        id: normalizarIdMercadoPago(query?.id),
+        dataId: normalizarIdMercadoPago(query?.["data.id"]),
+        paymentId: obtenerPaymentIdDesdeQuery(query),
+        merchantOrderId:
+            normalizarIdMercadoPago(query?.merchant_order_id) ||
+            normalizarIdMercadoPago(query?.merchant_order),
+        status: query?.status || null,
+        externalReference: query?.external_reference || null,
+    };
+}
+
+function crearResumenWebhookMercadoPago({ body, query }) {
+    return {
+        type: body?.type || body?.topic || query?.type || query?.topic || null,
+        id:
+            normalizarIdMercadoPago(body?.data?.id) ||
+            normalizarIdMercadoPago(query?.id) ||
+            normalizarIdMercadoPago(query?.["data.id"]),
+        resource: body?.resource ? String(body.resource).split("?")[0] : null,
+    };
 }
 
 async function obtenerMerchantOrderMercadoPago({ id, resource }) {
@@ -838,7 +875,7 @@ export async function crearPagoMercadoPago(req, res) {
             response.sandbox_init_point ||
             null;
 
-        console.log("MERCADO PAGO URL GENERADA:", {
+        logger.info("Preferencia de Mercado Pago generada", {
             preferenciaId,
             initPointHost: response.init_point
                 ? new URL(response.init_point).host
@@ -896,9 +933,9 @@ export async function crearPagoMercadoPago(req, res) {
             },
         });
     } catch (error) {
-        console.error(
-            "Error al crear preferencia de Mercado Pago:",
-            error,
+        logger.error(
+            "Error al crear preferencia de Mercado Pago",
+            serializeError(error),
         );
 
         if (pagoCreado) {
@@ -915,9 +952,9 @@ export async function crearPagoMercadoPago(req, res) {
                     },
                 });
             } catch (errorActualizacion) {
-                console.error(
-                    "No se pudo actualizar el intento de pago:",
-                    errorActualizacion,
+                logger.error(
+                    "No se pudo actualizar el intento de pago",
+                    serializeError(errorActualizacion),
                 );
             }
         }
@@ -934,7 +971,10 @@ export async function crearPagoMercadoPago(req, res) {
 export async function retornoMercadoPago(req, res) {
     const frontendUrl = obtenerFrontendUrl();
 
-    console.log("RETORNO MERCADO PAGO QUERY:", req.query);
+    logger.info(
+        "Retorno Mercado Pago recibido",
+        crearResumenQueryMercadoPago(req.query),
+    );
 
     const paymentId = obtenerPaymentIdDesdeQuery(req.query);
 
@@ -956,7 +996,10 @@ export async function retornoMercadoPago(req, res) {
                 `${frontendUrl}/carrito?info=mercadopago_sin_payment_id`,
             );
         }
-        console.log("RESULTADO RETORNO MERCADO PAGO:", resultado);
+        logger.info(
+            "Resultado retorno Mercado Pago",
+            crearResumenResultadoMercadoPago(resultado),
+        );
 
         if (
             resultado.estado === "aprobado" &&
@@ -991,7 +1034,7 @@ export async function retornoMercadoPago(req, res) {
             `&error=mercadopago_${resultado.estado}`,
         );
     } catch (error) {
-        console.error("Error en retorno de Mercado Pago:", error);
+        logger.error("Error en retorno de Mercado Pago", serializeError(error));
 
         return res.redirect(
             `${frontendUrl}/carrito?error=mercadopago_error`,
@@ -1001,8 +1044,13 @@ export async function retornoMercadoPago(req, res) {
 
 export async function webhookMercadoPago(req, res) {
     try {
-        console.log("WEBHOOK MERCADO PAGO BODY:", req.body);
-        console.log("WEBHOOK MERCADO PAGO QUERY:", req.query);
+        logger.info(
+            "Webhook Mercado Pago recibido",
+            crearResumenWebhookMercadoPago({
+                body: req.body,
+                query: req.query,
+            }),
+        );
 
         const tipo =
             req.body?.type ||
@@ -1026,7 +1074,10 @@ export async function webhookMercadoPago(req, res) {
             const resultado =
                 await procesarPagoMercadoPagoPorId(paymentId);
 
-            console.log("RESULTADO WEBHOOK PAYMENT:", resultado);
+            logger.info(
+                "Resultado webhook payment Mercado Pago",
+                crearResumenResultadoMercadoPago(resultado),
+            );
 
             return res.status(200).json({
                 ok: true,
@@ -1042,7 +1093,10 @@ export async function webhookMercadoPago(req, res) {
                     resource: req.body?.resource,
                 });
 
-            console.log("RESULTADO WEBHOOK MERCHANT ORDER:", resultado);
+            logger.info(
+                "Resultado webhook merchant order Mercado Pago",
+                crearResumenResultadoMercadoPago(resultado),
+            );
 
             return res.status(200).json({
                 ok: true,
@@ -1057,7 +1111,7 @@ export async function webhookMercadoPago(req, res) {
             tipo,
         });
     } catch (error) {
-        console.error("Error en webhook de Mercado Pago:", error);
+        logger.error("Error en webhook de Mercado Pago", serializeError(error));
 
         return res.status(500).json({
             ok: false,

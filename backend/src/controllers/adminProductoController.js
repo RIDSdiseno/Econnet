@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import cloudinary from "../config/cloudinary.js";
 
@@ -75,7 +76,7 @@ export const obtenerProductosAdmin = async (req, res) => {
             productos,
         });
     } catch (error) {
-        console.error("Error al obtener productos admin:", error);
+        logger.error("Error al obtener productos admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -175,7 +176,7 @@ export const crearProductoAdmin = async (req, res) => {
             producto,
         });
     } catch (error) {
-        console.error("Error al crear producto admin:", error);
+        logger.error("Error al crear producto admin:", serializeError(error));
 
         if (error.code === "P2002") {
             return res.status(400).json({
@@ -343,7 +344,7 @@ export const actualizarProductoAdmin = async (req, res) => {
             producto,
         });
     } catch (error) {
-        console.error("Error al actualizar producto admin:", error);
+        logger.error("Error al actualizar producto admin:", serializeError(error));
 
         if (error.code === "P2002") {
             return res.status(400).json({
@@ -423,7 +424,7 @@ export const agregarImagenProductoAdmin = async (req, res) => {
             imagen: nuevaImagen,
         });
     } catch (error) {
-        console.error("Error al agregar imagen producto admin:", error);
+        logger.error("Error al agregar imagen producto admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -478,7 +479,7 @@ export const marcarImagenPrincipalProductoAdmin = async (req, res) => {
             imagen: imagenActualizada,
         });
     } catch (error) {
-        console.error("Error al marcar imagen principal admin:", error);
+        logger.error("Error al marcar imagen principal admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -544,7 +545,7 @@ export const eliminarImagenProductoAdmin = async (req, res) => {
             try {
                 await cloudinary.uploader.destroy(imagenExiste.publicId);
             } catch (errorCloudinary) {
-                console.error(
+                logger.error(
                     "La imagen se eliminó de la base, pero no de Cloudinary:",
                     errorCloudinary
                 );
@@ -557,7 +558,7 @@ export const eliminarImagenProductoAdmin = async (req, res) => {
             imagenEliminada: imagenExiste,
         });
     } catch (error) {
-        console.error("Error al eliminar imagen producto admin:", error);
+        logger.error("Error al eliminar imagen producto admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -620,7 +621,7 @@ export const agregarEspecificacionProductoAdmin = async (req, res) => {
             especificacion: especificacionCreada,
         });
     } catch (error) {
-        console.error("Error al agregar especificación admin:", error);
+        logger.error("Error al agregar especificación admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -683,7 +684,7 @@ export const actualizarEspecificacionProductoAdmin = async (req, res) => {
             especificacion: especificacionActualizada,
         });
     } catch (error) {
-        console.error("Error al actualizar especificación admin:", error);
+        logger.error("Error al actualizar especificación admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -722,7 +723,7 @@ export const eliminarEspecificacionProductoAdmin = async (req, res) => {
             especificacionEliminada: especificacionExiste,
         });
     } catch (error) {
-        console.error("Error al eliminar especificación admin:", error);
+        logger.error("Error al eliminar especificación admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -807,7 +808,7 @@ export const reemplazarEspecificacionesProductoAdmin = async (req, res) => {
             producto: productoActualizado,
         });
     } catch (error) {
-        console.error("Error al reemplazar especificaciones admin:", error);
+        logger.error("Error al reemplazar especificaciones admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

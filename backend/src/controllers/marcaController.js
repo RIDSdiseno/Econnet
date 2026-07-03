@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerMarcas = async (req, res) => {
@@ -16,7 +17,7 @@ export const obtenerMarcas = async (req, res) => {
       marcas,
     });
   } catch (error) {
-    console.error("Error al obtener marcas:", error);
+    logger.error("Error al obtener marcas:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -50,7 +51,7 @@ export const obtenerMarcaPorId = async (req, res) => {
       marca,
     });
   } catch (error) {
-    console.error("Error al obtener marca:", error);
+    logger.error("Error al obtener marca:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -82,7 +83,7 @@ export const obtenerMarcasHome = async (req, res) => {
             marcas,
         });
     } catch (error) {
-        console.error("Error al obtener marcas del home:", error);
+        logger.error("Error al obtener marcas del home:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

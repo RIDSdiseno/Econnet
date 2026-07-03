@@ -399,7 +399,9 @@ function Productos() {
         setMarcas(marcasApi.sort((a, b) => a.orden - b.orden));
         setError("");
       } catch (error) {
-        console.error(error);
+        if (import.meta.env.DEV) {
+          console.error(error);
+        }
         setError("No se pudieron cargar los productos");
       } finally {
         setCargando(false);
@@ -423,7 +425,9 @@ function Productos() {
           favoritos.map((favorito) => favorito.productoId).filter(Boolean),
         );
       } catch (error) {
-        console.error("Error al cargar favoritos:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar favoritos:", error);
+        }
       }
     };
 

@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
@@ -110,7 +111,7 @@ export const registrarUsuario = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al registrar usuario:", error);
+    logger.error("Error al registrar usuario:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -183,7 +184,7 @@ export const loginUsuario = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al iniciar sesión:", error);
+    logger.error("Error al iniciar sesión:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -200,7 +201,7 @@ export const obtenerPerfil = async (req, res) => {
       usuario: req.usuario,
     });
   } catch (error) {
-    console.error("Error al obtener perfil:", error);
+    logger.error("Error al obtener perfil:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -274,7 +275,7 @@ export const actualizarPerfil = async (req, res) => {
       usuario: usuarioActualizado,
     });
   } catch (error) {
-    console.error("Error al actualizar perfil:", error);
+    logger.error("Error al actualizar perfil:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -350,7 +351,7 @@ export const cambiarPassword = async (req, res) => {
       mensaje: "Contraseña actualizada correctamente",
     });
   } catch (error) {
-    console.error("Error al cambiar contraseña:", error);
+    logger.error("Error al cambiar contraseña:", serializeError(error));
 
     res.status(500).json({
       ok: false,

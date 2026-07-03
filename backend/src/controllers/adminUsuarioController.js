@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 const convertirBooleano = (valor, defecto = false) => {
@@ -35,7 +36,7 @@ export const obtenerUsuariosAdmin = async (req, res) => {
             usuarios: usuarios.map(limpiarUsuario),
         });
     } catch (error) {
-        console.error("Error al obtener usuarios admin:", error);
+        logger.error("Error al obtener usuarios admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -98,7 +99,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             usuario: limpiarUsuario(usuarioActualizado),
         });
     } catch (error) {
-        console.error("Error al actualizar usuario admin:", error);
+        logger.error("Error al actualizar usuario admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

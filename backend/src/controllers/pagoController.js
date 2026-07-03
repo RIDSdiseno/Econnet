@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import transbankSdk from "transbank-sdk";
 import prisma from "../config/prisma.js";
 import { obtenerInfoEstadoPedido } from "../utils/estadosPedido.js";
@@ -85,6 +86,50 @@ function obtenerCodigoAutorizacionOneclick(response) {
   );
 }
 
+function crearResumenRespuestaWebpay(response) {
+  return {
+    buyOrder:
+      response.buy_order ||
+      response.buyOrder ||
+      response.buy_order_webpay ||
+      null,
+    sessionId: response.session_id || response.sessionId || null,
+    amount: response.amount ?? null,
+    status: response.status || null,
+    responseCode: response.response_code ?? response.responseCode ?? null,
+    authorizationCode:
+      response.authorization_code || response.authorizationCode || null,
+    paymentTypeCode: response.payment_type_code || response.paymentTypeCode || null,
+  };
+}
+
+function crearResumenRespuestaOneclick(response) {
+  const detalle = obtenerDetalleOneclick(response);
+
+  return {
+    buyOrder: response.buy_order || response.buyOrder || null,
+    status: response.status || detalle?.status || null,
+    responseCode:
+      detalle?.response_code ??
+      detalle?.responseCode ??
+      response.response_code ??
+      response.responseCode ??
+      null,
+    authorizationCode:
+      detalle?.authorization_code ||
+      detalle?.authorizationCode ||
+      response.authorization_code ||
+      response.authorizationCode ||
+      null,
+    paymentTypeCode:
+      detalle?.payment_type_code ||
+      detalle?.paymentTypeCode ||
+      response.payment_type_code ||
+      response.paymentTypeCode ||
+      null,
+  };
+}
+
 
 
 function generarOrdenCompra(pedidoId) {
@@ -136,7 +181,7 @@ function crearSeguimientoEstado(estado, detalleExtra = "") {
 
 function enviarDocumentoPagoEnSegundoPlano(pedidoId) {
   if (process.env.EMAIL_ENABLED !== "true") {
-    console.log(
+    logger.info(
       `Envío de correo desactivado temporalmente para el pedido ${pedidoId}`,
     );
     return;
@@ -145,14 +190,14 @@ function enviarDocumentoPagoEnSegundoPlano(pedidoId) {
   enviarDocumentoPedidoPorCorreo(pedidoId)
     .then((resultado) => {
       if (resultado?.omitido) {
-        console.log(
+        logger.info(
           `Correo del pedido ${pedidoId} omitido:`,
           resultado.mensaje,
         );
         return;
       }
 
-      console.log(
+      logger.info(
         `Correo del pedido ${pedidoId} enviado correctamente`,
       );
     })
@@ -162,9 +207,9 @@ function enviarDocumentoPagoEnSegundoPlano(pedidoId) {
        * Un error de correo no debe cambiar el estado del pago
        * ni impedir la redirección del cliente.
        */
-      console.error(
-        `No se pudo enviar el documento del pedido ${pedidoId}:`,
-        error.message,
+      logger.error(
+        `No se pudo enviar el documento del pedido ${pedidoId}`,
+        serializeError(error),
       );
     });
 }
@@ -304,7 +349,7 @@ export async function crearPagoWebpay(req, res) {
       },
     });
   } catch (error) {
-    console.error("Error al crear pago Webpay:", error);
+    logger.error("Error al crear pago Webpay", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -352,7 +397,7 @@ export async function retornoWebpay(req, res) {
 
     const response = await tx.commit(token);
 
-    console.log("Respuesta Webpay:", response);
+    logger.info("Respuesta Webpay", crearResumenRespuestaWebpay(response));
 
     const buyOrder =
       response.buy_order ||
@@ -460,7 +505,7 @@ export async function retornoWebpay(req, res) {
       `${frontendUrl}/carrito?error=pago_rechazado&pedidoId=${pedidoId}`
     );
   } catch (error) {
-    console.error("Error en retorno Webpay:", error);
+    logger.error("Error en retorno Webpay", serializeError(error));
 
     return res.redirect(`${frontendUrl}/carrito?error=webpay_error`);
   }
@@ -548,7 +593,7 @@ export async function crearPagoOneclick(req, res) {
       details
     );
 
-    console.log("Respuesta Oneclick:", response);
+    logger.info("Respuesta Oneclick", crearResumenRespuestaOneclick(response));
 
     const aprobado = pagoOneclickAprobado(response);
     const codigoAutorizacion = obtenerCodigoAutorizacionOneclick(response);
@@ -661,7 +706,7 @@ export async function crearPagoOneclick(req, res) {
       },
     });
   } catch (error) {
-    console.error("Error al crear pago Oneclick:", error);
+    logger.error("Error al crear pago Oneclick", serializeError(error));
 
     return res.status(500).json({
       ok: false,

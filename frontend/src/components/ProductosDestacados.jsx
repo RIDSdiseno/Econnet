@@ -196,7 +196,9 @@ function ProductosDestacados() {
 
         setProductosDestacados(productosAdaptados);
       } catch (error) {
-        console.error("Error al cargar productos destacados:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar productos destacados:", error);
+        }
         setProductosDestacados([]);
       } finally {
         setCargando(false);

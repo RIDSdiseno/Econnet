@@ -25,7 +25,9 @@ export function AuthProvider({ children }) {
 
         setUsuario(data.usuario);
       } catch (error) {
-        console.error("Error al cargar perfil:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar perfil:", error);
+        }
 
         localStorage.removeItem("token");
         setToken(null);

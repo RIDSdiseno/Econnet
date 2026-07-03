@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 const CATEGORIAS_VALIDAS = [
@@ -224,7 +225,7 @@ export const crearTicketSoporte = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al crear ticket de soporte:", error);
+    logger.error("Error al crear ticket de soporte:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -319,7 +320,7 @@ export const obtenerMisSolicitudes = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error al obtener solicitudes del usuario:", error);
+    logger.error("Error al obtener solicitudes del usuario:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -405,7 +406,7 @@ export const obtenerMiSolicitudPorId = async (req, res) => {
       solicitud,
     });
   } catch (error) {
-    console.error("Error al obtener detalle de solicitud:", error);
+    logger.error("Error al obtener detalle de solicitud:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -521,7 +522,7 @@ export const responderMiSolicitud = async (req, res) => {
       updatedAt: resultado.ticket.updatedAt,
     });
   } catch (error) {
-    console.error("Error al responder solicitud:", error);
+    logger.error("Error al responder solicitud:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

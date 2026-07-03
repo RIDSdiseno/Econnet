@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import { obtenerTarifaDespacho } from "../utils/despacho.js";
 import {
@@ -535,7 +536,7 @@ export const crearPedido = async (req, res) => {
       pedido,
     });
   } catch (error) {
-    console.error("Error al crear pedido:", error);
+    logger.error("Error al crear pedido:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -574,7 +575,7 @@ export const obtenerPedidos = async (req, res) => {
       pedidos,
     });
   } catch (error) {
-    console.error("Error al obtener pedidos:", error);
+    logger.error("Error al obtener pedidos:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -630,7 +631,7 @@ export const obtenerPedidoPorId = async (req, res) => {
       pedido,
     });
   } catch (error) {
-    console.error("Error al obtener pedido:", error);
+    logger.error("Error al obtener pedido:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -824,7 +825,7 @@ export const actualizarEstadoPedido = async (req, res) => {
       pedido: pedidoActualizado,
     });
   } catch (error) {
-    console.error("Error al actualizar estado del pedido:", error);
+    logger.error("Error al actualizar estado del pedido:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -894,7 +895,7 @@ export const descargarDocumentoPedidoInvitado = async (req, res) => {
 
     return res.send(buffer);
   } catch (error) {
-    console.error("Error al descargar documento invitado:", error);
+    logger.error("Error al descargar documento invitado:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -953,7 +954,7 @@ export const obtenerSeguimientoPedidoInvitado = async (req, res) => {
       pedido,
     });
   } catch (error) {
-    console.error("Error al obtener seguimiento invitado:", error);
+    logger.error("Error al obtener seguimiento invitado:", serializeError(error));
 
     return res.status(500).json({
       ok: false,
@@ -1016,7 +1017,7 @@ export const buscarPedidoInvitado = async (req, res) => {
       pedido,
     });
   } catch (error) {
-    console.error("Error al buscar pedido invitado:", error);
+    logger.error("Error al buscar pedido invitado:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

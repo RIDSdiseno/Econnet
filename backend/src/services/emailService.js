@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import nodemailer from "nodemailer";
 import prisma from "../config/prisma.js";
 import { generarDocumentoPedidoPDF } from "./documentoPdfService.js";
@@ -441,7 +442,7 @@ export async function enviarDocumentoPedidoPorCorreo(pedidoId) {
       messageId: info.messageId,
     };
   } catch (error) {
-    console.error("Error enviando documento por correo:", error);
+    logger.error("Error enviando documento por correo:", serializeError(error));
 
     await prisma.pedido.updateMany({
       where: {

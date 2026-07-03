@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import { obtenerTarifaDespacho } from "../utils/despacho.js";
 
@@ -72,7 +73,7 @@ export const calcularDespachoPedido = async (req, res) => {
       despacho: tarifa,
     });
   } catch (error) {
-    console.error("Error al calcular despacho:", error);
+    logger.error("Error al calcular despacho:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

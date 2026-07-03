@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerTarifasAdmin = async (req, res) => {
@@ -13,7 +14,7 @@ export const obtenerTarifasAdmin = async (req, res) => {
             tarifas,
         });
     } catch (error) {
-        console.error("Error al obtener tarifas admin:", error);
+        logger.error("Error al obtener tarifas admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -64,7 +65,7 @@ export const actualizarTarifaAdmin = async (req, res) => {
             tarifa: tarifaActualizada,
         });
     } catch (error) {
-        console.error("Error al actualizar tarifa admin:", error);
+        logger.error("Error al actualizar tarifa admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

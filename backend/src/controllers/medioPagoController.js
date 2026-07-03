@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import transbankSdk from "transbank-sdk";
 import prisma from "../config/prisma.js";
 
@@ -23,6 +24,23 @@ function generarUsername(usuarioId) {
     return `econnet_user_${usuarioId}`;
 }
 
+function crearResumenInscripcionOneclick(response) {
+    return {
+        responseCode: response.response_code ?? response.responseCode ?? null,
+        authorizationCode:
+            response.authorization_code ?? response.authorizationCode ?? null,
+        cardType: response.card_type ?? response.cardType ?? null,
+        tieneTbkUser: Boolean(
+            response.tbk_user ||
+            response.transbank_user ||
+            response.transbankUser,
+        ),
+        ultimos4: response.card_number || response.cardNumber
+            ? String(response.card_number || response.cardNumber).slice(-4)
+            : null,
+    };
+}
+
 export async function obtenerMediosPago(req, res) {
     try {
         const mediosPago = await prisma.medioPago.findMany({
@@ -45,7 +63,7 @@ export async function obtenerMediosPago(req, res) {
             mediosPago,
         });
     } catch (error) {
-        console.error("Error al obtener medios de pago:", error);
+        logger.error("Error al obtener medios de pago:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -91,7 +109,7 @@ export async function iniciarInscripcionMedioPago(req, res) {
             },
         });
     } catch (error) {
-        console.error("Error al iniciar inscripción Oneclick:", error);
+        logger.error("Error al iniciar inscripción Oneclick:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -167,7 +185,10 @@ export async function retornoInscripcionMedioPago(req, res) {
 
         const response = await inscription.finish(token);
 
-        console.log("Respuesta finish Oneclick:", response);
+        logger.info(
+            "Respuesta finish Oneclick",
+            crearResumenInscripcionOneclick(response),
+        );
 
         const responseCode = response.response_code ?? response.responseCode;
 
@@ -250,7 +271,10 @@ export async function retornoInscripcionMedioPago(req, res) {
             `${frontendUrl}/mi-cuenta?seccion=medios-pago&ok=medio_pago_guardado`,
         );
     } catch (error) {
-        console.error("Error al finalizar inscripción Oneclick:", error);
+        logger.error(
+            "Error al finalizar inscripción Oneclick",
+            serializeError(error),
+        );
 
         if (inscripcionPendiente) {
             await prisma.medioPagoInscripcion.update({
@@ -302,7 +326,7 @@ export async function eliminarMedioPago(req, res) {
             mensaje: "Medio de pago eliminado correctamente",
         });
     } catch (error) {
-        console.error("Error al eliminar medio de pago:", error);
+        logger.error("Error al eliminar medio de pago:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

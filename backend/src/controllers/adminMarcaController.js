@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerMarcasAdmin = async (req, res) => {
@@ -21,7 +22,7 @@ export const obtenerMarcasAdmin = async (req, res) => {
             marcas,
         });
     } catch (error) {
-        console.error("Error al obtener marcas admin:", error);
+        logger.error("Error al obtener marcas admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -65,7 +66,7 @@ export const crearMarcaAdmin = async (req, res) => {
             marca: marcaCreada,
         });
     } catch (error) {
-        console.error("Error al crear marca admin:", error);
+        logger.error("Error al crear marca admin:", serializeError(error));
 
         if (error.code === "P2002") {
             return res.status(400).json({
@@ -134,7 +135,7 @@ export const actualizarMarcaAdmin = async (req, res) => {
             marca: marcaActualizada,
         });
     } catch (error) {
-        console.error("Error al actualizar marca admin:", error);
+        logger.error("Error al actualizar marca admin:", serializeError(error));
 
         if (error.code === "P2002") {
             return res.status(400).json({

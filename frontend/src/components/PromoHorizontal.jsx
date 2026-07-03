@@ -15,7 +15,9 @@ function PromoHorizontal() {
 
         setPromo(anuncios[0] || null);
       } catch (error) {
-        console.error("Error al cargar promo horizontal:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar promo horizontal:", error);
+        }
       } finally {
         setCargando(false);
       }

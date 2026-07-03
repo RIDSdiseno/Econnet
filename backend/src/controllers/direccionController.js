@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerDirecciones = async (req, res) => {
@@ -21,7 +22,7 @@ export const obtenerDirecciones = async (req, res) => {
             direcciones,
         });
     } catch (error) {
-        console.error("Error al obtener direcciones:", error);
+        logger.error("Error al obtener direcciones:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -90,7 +91,7 @@ export const crearDireccion = async (req, res) => {
             direccion: nuevaDireccion,
         });
     } catch (error) {
-        console.error("Error al crear dirección:", error);
+        logger.error("Error al crear dirección:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -150,7 +151,7 @@ export const marcarDireccionPrincipal = async (req, res) => {
             direccion: direccionActualizada,
         });
     } catch (error) {
-        console.error("Error al marcar dirección principal:", error);
+        logger.error("Error al marcar dirección principal:", serializeError(error));
 
         res.status(500).json({
             ok: false,
@@ -197,7 +198,7 @@ export const eliminarDireccion = async (req, res) => {
             mensaje: "Dirección eliminada correctamente",
         });
     } catch (error) {
-        console.error("Error al eliminar dirección:", error);
+        logger.error("Error al eliminar dirección:", serializeError(error));
 
         res.status(500).json({
             ok: false,

@@ -140,7 +140,9 @@ function Contacto() {
 
         setPedidosUsuario(Array.isArray(pedidos) ? pedidos : []);
       } catch (error) {
-        console.error("Error al cargar pedidos para soporte:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar pedidos para soporte:", error);
+        }
 
         message.error(error.message || "No se pudieron cargar tus pedidos");
       } finally {
@@ -252,7 +254,9 @@ function Contacto() {
 
       limpiarFormulario();
     } catch (error) {
-      console.error("Error enviando solicitud de soporte:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error enviando solicitud de soporte:", error);
+      }
 
       message.error(error.message || "No se pudo enviar la solicitud");
     } finally {

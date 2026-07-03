@@ -264,7 +264,9 @@ function DetalleProducto() {
         setImagenSeleccionada(imagenPrincipal);
         setError("");
       } catch (error) {
-        console.error(error);
+        if (import.meta.env.DEV) {
+          console.error(error);
+        }
         setError("No se pudo cargar el producto");
       } finally {
         setCargando(false);
@@ -290,7 +292,9 @@ function DetalleProducto() {
 
         setEsFavorito(existe);
       } catch (error) {
-        console.error("Error al cargar favorito:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar favorito:", error);
+        }
       }
     };
 

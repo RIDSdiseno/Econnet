@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -72,7 +73,7 @@ export function iniciarGoogle(req, res) {
 
     return res.redirect(authUrl);
   } catch (error) {
-    console.error("Error iniciando sesión con Google:", error.message);
+    logger.error("Error iniciando sesión con Google", serializeError(error));
 
     const params = new URLSearchParams({
       error: "No se pudo iniciar sesión con Google",
@@ -168,7 +169,7 @@ export async function callbackGoogle(req, res) {
       `${FRONTEND_URL || "http://localhost:5173"}/auth/callback?${params.toString()}`
     );
   } catch (error) {
-    console.error("Error en callback Google:", error.message);
+    logger.error("Error en callback Google", serializeError(error));
 
     const params = new URLSearchParams({
       error: error.message || "No se pudo iniciar sesión con Google",

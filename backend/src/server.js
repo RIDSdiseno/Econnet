@@ -1,4 +1,5 @@
 import "dotenv/config";
+import logger, { serializeError } from "./config/logger.js";
 import express from "express";
 import cors from "cors";
 import prisma from "./config/prisma.js";
@@ -62,7 +63,7 @@ const origenesPermitidos = [
   .filter(Boolean)
   .map((origen) => origen.trim().replace(/\/+$/, ""));
 
-console.log("Orígenes permitidos por CORS:", origenesPermitidos);
+logger.info("Orígenes permitidos por CORS:", origenesPermitidos);
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -82,7 +83,7 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    console.warn(`Origen bloqueado por CORS: ${origin}`);
+    logger.warn(`Origen bloqueado por CORS: ${origin}`);
 
     return callback(
       new Error(`El origen ${origin} no está permitido por CORS`)
@@ -174,7 +175,7 @@ app.use((error, req, res, next) => {
     });
   }
 
-  console.error("Error no controlado:", error);
+  logger.error("Error no controlado", serializeError(error));
 
   return res.status(500).json({
     ok: false,
@@ -186,7 +187,7 @@ app.use((error, req, res, next) => {
 
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Servidor ejecutándose en el puerto ${PORT}`);
+  logger.info(`Servidor ejecutándose en el puerto ${PORT}`);
 
   iniciarRevisionPedidosVencidos();
 });

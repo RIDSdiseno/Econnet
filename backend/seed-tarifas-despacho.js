@@ -1,3 +1,4 @@
+import logger, { serializeError } from "./src/config/logger.js";
 import prisma from "./src/config/prisma.js";
 
 async function main() {
@@ -43,12 +44,12 @@ async function main() {
     });
   }
 
-  console.log("Tarifas de despacho creadas/actualizadas correctamente");
+  logger.info("Tarifas de despacho creadas/actualizadas correctamente");
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    logger.error("Error al crear tarifas de despacho", serializeError(error));
   })
   .finally(async () => {
     await prisma.$disconnect();

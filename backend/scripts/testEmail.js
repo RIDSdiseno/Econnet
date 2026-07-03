@@ -1,9 +1,10 @@
 import "dotenv/config";
+import logger, { serializeError } from "../src/config/logger.js";
 import { transporter, emailFrom, emailEnabled } from "../src/config/email.js";
 
 async function main() {
   if (!emailEnabled) {
-    console.log("EMAIL_ENABLED está en false. Cambia a true para probar.");
+    logger.info("EMAIL_ENABLED está en false. Cambia a true para probar.");
     return;
   }
 
@@ -19,10 +20,10 @@ async function main() {
     `,
   });
 
-  console.log("Correo de prueba enviado correctamente");
+  logger.info("Correo de prueba enviado correctamente");
 }
 
 main().catch((error) => {
-  console.error("Error enviando correo de prueba:", error);
+  logger.error("Error enviando correo de prueba", serializeError(error));
   process.exit(1);
 });

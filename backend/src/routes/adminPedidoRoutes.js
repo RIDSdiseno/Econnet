@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import express from "express";
 import { protegerRuta } from "../middlewares/authMiddleware.js";
 import { soloAdmin } from "../middlewares/adminMiddleware.js";
@@ -30,7 +31,7 @@ router.put(
     protegerRuta,
     soloAdmin,
     (req, res, next) => {
-        console.log(
+        logger.info(
             "RUTA ADMIN DE CAMBIO DE ESTADO EJECUTADA",
             req.params.id,
             req.body,

@@ -16,7 +16,9 @@ function BannerCarousel() {
 
         setBanners(anuncios);
       } catch (error) {
-        console.error("Error al cargar banners:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar banners:", error);
+        }
       } finally {
         setCargando(false);
       }

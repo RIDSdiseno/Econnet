@@ -60,7 +60,9 @@ function AnunciosTriples() {
 
         setCategorias(categoriasApi);
       } catch (error) {
-        console.error("Error al cargar categorías:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar categorías:", error);
+        }
       } finally {
         setCargando(false);
       }

@@ -140,10 +140,12 @@ function AdminDetalleSoporte() {
       setTicket(data.ticket);
       setEstadoSeleccionado(data.ticket.estado);
     } catch (error) {
-      console.error(
-        "Error al obtener la solicitud:",
-        error,
-      );
+      if (import.meta.env.DEV) {
+        console.error(
+          "Error al obtener la solicitud:",
+          error,
+        );
+      }
 
       message.error(
         error.message ||
@@ -190,10 +192,12 @@ function AdminDetalleSoporte() {
 
       await cargarTicket();
     } catch (error) {
-      console.error(
-        "Error actualizando estado:",
-        error,
-      );
+      if (import.meta.env.DEV) {
+        console.error(
+          "Error actualizando estado:",
+          error,
+        );
+      }
 
       message.error(
         error.message ||
@@ -238,10 +242,12 @@ function AdminDetalleSoporte() {
 
       await cargarTicket();
     } catch (error) {
-      console.error(
-        "Error respondiendo solicitud:",
-        error,
-      );
+      if (import.meta.env.DEV) {
+        console.error(
+          "Error respondiendo solicitud:",
+          error,
+        );
+      }
 
       message.error(
         error.message ||

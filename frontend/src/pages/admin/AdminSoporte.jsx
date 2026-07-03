@@ -165,10 +165,12 @@ function AdminSoporte() {
         },
       );
     } catch (error) {
-      console.error(
-        "Error cargando solicitudes de soporte:",
-        error,
-      );
+      if (import.meta.env.DEV) {
+        console.error(
+          "Error cargando solicitudes de soporte:",
+          error,
+        );
+      }
 
       message.error(
         error.message ||

@@ -1,10 +1,11 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 const ejecutarSeguro = async (consulta, valorDefecto) => {
     try {
         return await consulta();
     } catch (error) {
-        console.warn("Consulta dashboard omitida:", error.message);
+        logger.warn("Consulta dashboard omitida:", error.message);
         return valorDefecto;
     }
 };
@@ -170,7 +171,7 @@ export const obtenerDashboardAdmin = async (req, res) => {
             ultimosPedidos,
         });
     } catch (error) {
-        console.error("Error al obtener dashboard admin:", error);
+        logger.error("Error al obtener dashboard admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

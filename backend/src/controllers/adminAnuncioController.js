@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import cloudinary from "../config/cloudinary.js";
 
@@ -22,7 +23,7 @@ export const obtenerAnunciosAdmin = async (req, res) => {
             anuncios,
         });
     } catch (error) {
-        console.error("Error al obtener anuncios admin:", error);
+        logger.error("Error al obtener anuncios admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -70,7 +71,7 @@ export const crearAnuncioAdmin = async (req, res) => {
             anuncio: anuncioCreado,
         });
     } catch (error) {
-        console.error("Error al crear anuncio admin:", error);
+        logger.error("Error al crear anuncio admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -136,7 +137,7 @@ export const actualizarAnuncioAdmin = async (req, res) => {
             anuncio: anuncioActualizado,
         });
     } catch (error) {
-        console.error("Error al actualizar anuncio admin:", error);
+        logger.error("Error al actualizar anuncio admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -172,7 +173,7 @@ export const eliminarAnuncioAdmin = async (req, res) => {
             try {
                 await cloudinary.uploader.destroy(anuncioExiste.publicId);
             } catch (errorCloudinary) {
-                console.error(
+                logger.error(
                     "El anuncio se eliminó de la base, pero no de Cloudinary:",
                     errorCloudinary
                 );
@@ -185,7 +186,7 @@ export const eliminarAnuncioAdmin = async (req, res) => {
             anuncioEliminado: anuncioExiste,
         });
     } catch (error) {
-        console.error("Error al eliminar anuncio admin:", error);
+        logger.error("Error al eliminar anuncio admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

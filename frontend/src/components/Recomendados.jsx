@@ -153,7 +153,9 @@ function Recomendados() {
 
         setRecomendados(productosAdaptados);
       } catch (error) {
-        console.error("Error al cargar recomendados:", error);
+        if (import.meta.env.DEV) {
+          console.error("Error al cargar recomendados:", error);
+        }
       } finally {
         setCargando(false);
       }

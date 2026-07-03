@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import { generarDocumentoPedidoPDF } from "../services/documentoPdfService.js";
 
@@ -96,7 +97,7 @@ export async function descargarDocumentoPedido(req, res) {
 
     return res.send(pdfBuffer);
   } catch (error) {
-    console.error("Error al generar documento PDF:", error);
+    logger.error("Error al generar documento PDF:", serializeError(error));
 
     return res.status(500).json({
       ok: false,

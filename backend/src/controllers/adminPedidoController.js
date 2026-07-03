@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 import {
     estadoPedidoValido,
@@ -34,7 +35,7 @@ export const obtenerPedidosAdmin = async (req, res) => {
             pedidos,
         });
     } catch (error) {
-        console.error("Error al obtener pedidos admin:", error);
+        logger.error("Error al obtener pedidos admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -83,7 +84,7 @@ export const obtenerPedidoAdminPorId = async (req, res) => {
             pedido,
         });
     } catch (error) {
-        console.error("Error al obtener pedido admin:", error);
+        logger.error("Error al obtener pedido admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,
@@ -191,7 +192,7 @@ export const actualizarEstadoPedidoAdmin = async (req, res) => {
             pedido: pedidoActualizado,
         });
     } catch (error) {
-        console.error("Error al actualizar estado admin:", error);
+        logger.error("Error al actualizar estado admin:", serializeError(error));
 
         return res.status(500).json({
             ok: false,

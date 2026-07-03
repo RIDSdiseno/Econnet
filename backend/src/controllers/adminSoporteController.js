@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 const ESTADOS_VALIDOS = [
@@ -126,7 +127,7 @@ export const obtenerTicketsSoporteAdmin = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al obtener tickets de soporte:",
       error,
     );
@@ -205,7 +206,7 @@ export const obtenerTicketSoporteAdminPorId = async (
       ticket,
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al obtener detalle de soporte:",
       error,
     );
@@ -315,7 +316,7 @@ export const responderTicketSoporteAdmin = async (
       estado: resultado.ticket.estado,
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al responder ticket de soporte:",
       error,
     );
@@ -390,7 +391,7 @@ export const actualizarEstadoTicketSoporteAdmin = async (
       ticket,
     });
   } catch (error) {
-    console.error(
+    logger.error(
       "Error al actualizar estado del ticket:",
       error,
     );

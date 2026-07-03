@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import logger, { serializeError } from "../src/config/logger.js";
 
 const prisma = new PrismaClient();
 
@@ -272,13 +273,17 @@ async function main() {
     },
   });
 
-  console.log("Datos de prueba creados correctamente");
-  console.log({ notebook: notebook.nombre, monitor: monitor.nombre, ssd: ssd.nombre, camara: camara.nombre });
+  logger.info("Datos de prueba creados correctamente", {
+    notebook: notebook.nombre,
+    monitor: monitor.nombre,
+    ssd: ssd.nombre,
+    camara: camara.nombre,
+  });
 }
 
 main()
   .catch((error) => {
-    console.error("Error al crear datos de prueba:", error);
+    logger.error("Error al crear datos de prueba", serializeError(error));
   })
   .finally(async () => {
     await prisma.$disconnect();

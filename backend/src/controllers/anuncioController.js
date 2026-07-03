@@ -1,3 +1,4 @@
+import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
 export const obtenerAnuncios = async (req, res) => {
@@ -19,7 +20,7 @@ export const obtenerAnuncios = async (req, res) => {
       anuncios,
     });
   } catch (error) {
-    console.error("Error al obtener anuncios:", error);
+    logger.error("Error al obtener anuncios:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -47,7 +48,7 @@ export const obtenerAnunciosAdmin = async (req, res) => {
       anuncios,
     });
   } catch (error) {
-    console.error("Error al obtener anuncios admin:", error);
+    logger.error("Error al obtener anuncios admin:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -96,7 +97,7 @@ export const crearAnuncio = async (req, res) => {
       anuncio: nuevoAnuncio,
     });
   } catch (error) {
-    console.error("Error al crear anuncio:", error);
+    logger.error("Error al crear anuncio:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -164,7 +165,7 @@ export const editarAnuncio = async (req, res) => {
       anuncio: anuncioActualizado,
     });
   } catch (error) {
-    console.error("Error al editar anuncio:", error);
+    logger.error("Error al editar anuncio:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -201,7 +202,7 @@ export const desactivarAnuncio = async (req, res) => {
       anuncio,
     });
   } catch (error) {
-    console.error("Error al desactivar anuncio:", error);
+    logger.error("Error al desactivar anuncio:", serializeError(error));
 
     res.status(500).json({
       ok: false,
@@ -238,7 +239,7 @@ export const reactivarAnuncio = async (req, res) => {
       anuncio,
     });
   } catch (error) {
-    console.error("Error al reactivar anuncio:", error);
+    logger.error("Error al reactivar anuncio:", serializeError(error));
 
     res.status(500).json({
       ok: false,
