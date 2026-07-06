@@ -7,6 +7,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node prisma/seed.js",
+    "prisma:generate": "prisma generate",
+    "postinstall": "prisma generate",
     "generate:jwt-secret": "node scripts/generateJwtSecret.js",
     "test:email": "node scripts/testEmail.js",
     "send:documento": "node scripts/enviarDocumentoPedido.js"
