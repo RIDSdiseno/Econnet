@@ -235,7 +235,7 @@ function DetalleProducto() {
 
         const [productoApi, productosApi] = await Promise.all([
           obtenerProductoPorId(id),
-          obtenerProductos(),
+          obtenerProductos({ limit: 100 }),
         ]);
 
         const imagenesValidas =

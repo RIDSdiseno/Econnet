@@ -136,7 +136,7 @@ function Recomendados() {
       try {
         setCargando(true);
 
-        const productosApi = await obtenerProductos();
+        const productosApi = await obtenerProductos({ limit: 100 });
 
         const productosNoDestacados = productosApi.filter(
           (producto) => !producto.destacado,

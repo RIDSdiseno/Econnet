@@ -255,7 +255,7 @@ function OfertasLanzamientos() {
       try {
         setCargando(true);
 
-        const productosApi = await obtenerProductos();
+        const productosApi = await obtenerProductos({ limit: 100 });
 
         const productosEnOfertas = productosApi
           .filter((producto) => producto.activo && producto.mostrarEnOfertas)

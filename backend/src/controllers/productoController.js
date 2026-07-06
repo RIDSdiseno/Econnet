@@ -1,42 +1,182 @@
 import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
 
-export const obtenerProductos = async (req, res) => {
-    try {
-        const productos = await prisma.producto.findMany({
-            where: {
-                activo: true,
+const PAGINA_DEFAULT = 1;
+const LIMITE_DEFAULT = 20;
+const LIMITE_MAXIMO = 100;
+
+function normalizarEnteroPositivo(valor, defecto, maximo = null) {
+    const numero = Number.parseInt(valor, 10);
+
+    if (!Number.isFinite(numero) || numero < 1) {
+        return defecto;
+    }
+
+    return maximo ? Math.min(numero, maximo) : numero;
+}
+
+function normalizarTextoFiltro(valor) {
+    if (valor === undefined || valor === null) {
+        return null;
+    }
+
+    const texto = String(valor).trim();
+
+    return texto.length > 0 ? texto : null;
+}
+
+function construirFiltroRelacion(valor, campoSlug = null) {
+    const texto = normalizarTextoFiltro(valor);
+
+    if (!texto) {
+        return null;
+    }
+
+    const filtros = [
+        {
+            nombre: {
+                contains: texto,
+                mode: "insensitive",
             },
-            include: {
-                categoria: true,
-                marca: true,
-                imagenes: {
-                    orderBy: [
-                        { esPrincipal: "desc" },
-                        { orden: "asc" },
-                    ],
-                },
-                especificaciones: {
-                    orderBy: {
-                        orden: "asc",
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: "desc",
+        },
+    ];
+
+    const id = Number(texto);
+
+    if (Number.isInteger(id) && id > 0) {
+        filtros.push({ id });
+    }
+
+    if (campoSlug) {
+        filtros.push({
+            [campoSlug]: {
+                equals: texto,
+                mode: "insensitive",
             },
         });
+    }
+
+    return {
+        OR: filtros,
+    };
+}
+
+function construirOrderBy(orden) {
+    const ordenesPermitidos = {
+        precio_asc: { precio: "asc" },
+        precio_desc: { precio: "desc" },
+        recientes: { createdAt: "desc" },
+        nombre_asc: { nombre: "asc" },
+    };
+
+    return ordenesPermitidos[orden] || { createdAt: "desc" };
+}
+
+export const obtenerProductos = async (req, res) => {
+    try {
+        const pagina = normalizarEnteroPositivo(
+            req.query.page,
+            PAGINA_DEFAULT,
+        );
+        const limite = normalizarEnteroPositivo(
+            req.query.limit,
+            LIMITE_DEFAULT,
+            LIMITE_MAXIMO,
+        );
+        const skip = (pagina - 1) * limite;
+
+        const categoria = construirFiltroRelacion(req.query.categoria, "slug");
+        const marca = construirFiltroRelacion(req.query.marca);
+        const buscar = normalizarTextoFiltro(req.query.buscar);
+        const orderBy = construirOrderBy(req.query.orden);
+
+        const where = {
+            activo: true,
+            ...(categoria ? { categoria } : {}),
+            ...(marca ? { marca } : {}),
+            ...(buscar
+                ? {
+                    OR: [
+                        {
+                            nombre: {
+                                contains: buscar,
+                                mode: "insensitive",
+                            },
+                        },
+                        {
+                            descripcion: {
+                                contains: buscar,
+                                mode: "insensitive",
+                            },
+                        },
+                        {
+                            sku: {
+                                contains: buscar,
+                                mode: "insensitive",
+                            },
+                        },
+                        {
+                            marca: {
+                                nombre: {
+                                    contains: buscar,
+                                    mode: "insensitive",
+                                },
+                            },
+                        },
+                        {
+                            categoria: {
+                                nombre: {
+                                    contains: buscar,
+                                    mode: "insensitive",
+                                },
+                            },
+                        },
+                    ],
+                }
+                : {}),
+        };
+
+        const include = {
+            categoria: true,
+            marca: true,
+            imagenes: {
+                orderBy: [
+                    { esPrincipal: "desc" },
+                    { orden: "asc" },
+                ],
+            },
+            especificaciones: {
+                orderBy: {
+                    orden: "asc",
+                },
+            },
+        };
+
+        const [total, productos] = await prisma.$transaction([
+            prisma.producto.count({ where }),
+            prisma.producto.findMany({
+                where,
+                include,
+                orderBy,
+                skip,
+                take: limite,
+            }),
+        ]);
 
         res.json({
             ok: true,
             productos,
+            total,
+            pagina,
+            limite,
+            totalPaginas: Math.ceil(total / limite),
         });
     } catch (error) {
         logger.error("Error al obtener productos:", serializeError(error));
 
         res.status(500).json({
             ok: false,
-            mensaje: "Error al obtener productos",
+            mensaje: "No fue posible obtener los productos",
         });
     }
 };

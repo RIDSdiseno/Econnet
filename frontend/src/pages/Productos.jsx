@@ -361,7 +361,7 @@ function Productos() {
         setCargando(true);
 
         const [productosApi, categoriasApi, marcasApi] = await Promise.all([
-          obtenerProductos(),
+          obtenerProductos({ limit: 100 }),
           obtenerCategorias(),
           obtenerMarcas(),
         ]);
