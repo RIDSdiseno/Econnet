@@ -2,11 +2,29 @@ import { useEffect, useState } from "react";
 import { Modal, Input, Button, message } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { suscribirseNewsletter } from "../services/api";
+import { useApi } from "../hooks/useApi";
 
 function SuscripcionModal() {
   const [open, setOpen] = useState(false);
   const [correo, setCorreo] = useState("");
-  const [cargando, setCargando] = useState(false);
+  const { loading: cargando, execute: enviarSuscripcion } = useApi(
+    suscribirseNewsletter,
+    {
+      errorMessage: "No se pudo registrar la suscripción",
+      onSuccess: (data) => {
+        message.success(
+          data.codigoDescuento
+            ? `¡Gracias por suscribirte! Código: ${data.codigoDescuento}`
+            : data.mensaje || "¡Gracias por suscribirte!",
+        );
+
+        localStorage.setItem("newsletterSuscrito", "true");
+
+        setCorreo("");
+        setOpen(false);
+      },
+    },
+  );
 
   useEffect(() => {
     const yaSuscrito = localStorage.getItem("newsletterSuscrito");
@@ -39,26 +57,7 @@ function SuscripcionModal() {
       return;
     }
 
-    try {
-      setCargando(true);
-
-      const data = await suscribirseNewsletter(correoLimpio);
-
-      message.success(
-        data.codigoDescuento
-          ? `¡Gracias por suscribirte! Código: ${data.codigoDescuento}`
-          : data.mensaje || "¡Gracias por suscribirte!",
-      );
-
-      localStorage.setItem("newsletterSuscrito", "true");
-
-      setCorreo("");
-      setOpen(false);
-    } catch (error) {
-      message.error(error.message || "No se pudo registrar la suscripción");
-    } finally {
-      setCargando(false);
-    }
+    await enviarSuscripcion(correoLimpio);
   };
 
   return (

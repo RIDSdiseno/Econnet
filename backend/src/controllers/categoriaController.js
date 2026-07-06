@@ -1,63 +1,48 @@
 import logger, { serializeError } from "../config/logger.js";
 import prisma from "../config/prisma.js";
+import { AppError } from "../utils/AppError.js";
 
 export const obtenerCategorias = async (req, res) => {
-  try {
-    const categorias = await prisma.categoria.findMany({
-      where: {
-        activo: true,
-      },
-      orderBy: {
-        nombre: "asc",
-      },
-    });
+  const categorias = await prisma.categoria.findMany({
+    where: {
+      activo: true,
+    },
+    orderBy: {
+      nombre: "asc",
+    },
+  });
 
-    res.json({
-      ok: true,
-      categorias,
-    });
-  } catch (error) {
-    logger.error("Error al obtener categorías:", serializeError(error));
-
-    res.status(500).json({
-      ok: false,
-      mensaje: "Error al obtener categorías",
-    });
-  }
+  res.json({
+    ok: true,
+    categorias,
+  });
 };
 
 export const obtenerCategoriaPorId = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
+  const categoriaId = Number(id);
 
-    const categoria = await prisma.categoria.findUnique({
-      where: {
-        id: Number(id),
-      },
-      include: {
-        productos: true,
-      },
-    });
-
-    if (!categoria) {
-      return res.status(404).json({
-        ok: false,
-        mensaje: "Categoría no encontrada",
-      });
-    }
-
-    res.json({
-      ok: true,
-      categoria,
-    });
-  } catch (error) {
-    logger.error("Error al obtener categoría:", serializeError(error));
-
-    res.status(500).json({
-      ok: false,
-      mensaje: "Error al obtener la categoría",
-    });
+  if (!Number.isInteger(categoriaId) || categoriaId <= 0) {
+    throw new AppError("ID de categoría inválido", 400);
   }
+
+  const categoria = await prisma.categoria.findUnique({
+    where: {
+      id: categoriaId,
+    },
+    include: {
+      productos: true,
+    },
+  });
+
+  if (!categoria) {
+    throw new AppError("Categoría no encontrada", 404);
+  }
+
+  res.json({
+    ok: true,
+    categoria,
+  });
 };
 
 export const editarCategoria = async (req, res) => {

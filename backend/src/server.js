@@ -1,8 +1,12 @@
 import "dotenv/config";
-import logger, { serializeError } from "./config/logger.js";
+import logger from "./config/logger.js";
 import express from "express";
 import cors from "cors";
 import prisma from "./config/prisma.js";
+import {
+  errorMiddleware,
+  notFoundMiddleware,
+} from "./middlewares/errorMiddleware.js";
 
 import productoRoutes from "./routes/productoRoutes.js";
 import categoriaRoutes from "./routes/categoriaRoutes.js";
@@ -166,23 +170,8 @@ app.get("/api/test", async (req, res) => {
   }
 });
 
-app.use((error, req, res, next) => {
-  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
-    return res.status(400).json({
-      ok: false,
-      mensaje: "El body enviado no es un JSON válido",
-      error: error.message,
-    });
-  }
-
-  logger.error("Error no controlado", serializeError(error));
-
-  return res.status(500).json({
-    ok: false,
-    mensaje: "Error interno del servidor",
-    error: error.message,
-  });
-});
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);
 
 
 
