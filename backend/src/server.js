@@ -67,7 +67,9 @@ const origenesPermitidos = [
   .filter(Boolean)
   .map((origen) => origen.trim().replace(/\/+$/, ""));
 
-logger.info("Orígenes permitidos por CORS:", origenesPermitidos);
+  logger.info("Orígenes permitidos por CORS", {
+  origenes: origenesPermitidos,
+});
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -149,23 +151,32 @@ app.use("/api/admin/productos-vendidos", adminProductosVendidosRoutes);
 app.use("/api/admin/envios", adminEnvioRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Backend de Econnet funcionando correctamente");
+  return res.send("Backend de Econnet funcionando correctamente");
 });
 
-app.get("/api/test", async (req, res) => {
-  try {
-    await prisma.$connect();
+app.get("/api/test", (req, res) => {
+  return res.status(200).json({
+    ok: true,
+    mensaje: "API de Econnet funcionando correctamente",
+  });
+});
 
-    res.json({
+app.get("/api/test/database", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+
+    return res.status(200).json({
       ok: true,
-      mensaje: "API de Econnet funcionando correctamente",
-      database: "Conexión con Prisma correcta",
+      mensaje: "Conexión con la base de datos correcta",
     });
   } catch (error) {
-    res.status(500).json({
+    logger.error("Error en comprobación de base de datos", {
+      mensaje: error.message,
+    });
+
+    return res.status(503).json({
       ok: false,
-      mensaje: "Error al conectar con la base de datos",
-      error: error.message,
+      mensaje: "La base de datos no está disponible",
     });
   }
 });
@@ -173,12 +184,19 @@ app.get("/api/test", async (req, res) => {
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
-
-
 app.listen(PORT, "0.0.0.0", () => {
   logger.info(`Servidor ejecutándose en el puerto ${PORT}`);
 
-  iniciarRevisionPedidosVencidos();
+  Promise.resolve()
+    .then(() => iniciarRevisionPedidosVencidos())
+    .catch((error) => {
+      logger.error("No se pudo iniciar la revisión de pedidos vencidos", {
+        mensaje: error.message,
+        stack:
+          process.env.NODE_ENV !== "production"
+            ? error.stack
+            : undefined,
+      });
+    });
 });
-
 
