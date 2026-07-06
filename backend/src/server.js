@@ -184,11 +184,17 @@ app.get("/api/test/database", async (req, res) => {
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
-app.listen(PORT, "0.0.0.0", () => {
+let intervaloRevisionPedidos = null;
+let cerrandoServidor = false;
+
+const server = app.listen(PORT, "0.0.0.0", () => {
   logger.info(`Servidor ejecutándose en el puerto ${PORT}`);
 
   Promise.resolve()
     .then(() => iniciarRevisionPedidosVencidos())
+    .then((intervalo) => {
+      intervaloRevisionPedidos = intervalo;
+    })
     .catch((error) => {
       logger.error("No se pudo iniciar la revisión de pedidos vencidos", {
         mensaje: error.message,
@@ -198,5 +204,83 @@ app.listen(PORT, "0.0.0.0", () => {
             : undefined,
       });
     });
+});
+
+async function cerrarServidor(signal) {
+  if (cerrandoServidor) {
+    return;
+  }
+
+  cerrandoServidor = true;
+
+  logger.info("Iniciando cierre controlado del servidor", {
+    signal,
+  });
+
+  const cierreForzado = setTimeout(() => {
+    logger.error("Cierre forzado por tiempo de espera agotado", {
+      signal,
+    });
+
+    process.exit(1);
+  }, 10_000);
+
+  cierreForzado.unref?.();
+
+  server.close(async (error) => {
+    if (error) {
+      logger.error("Error al cerrar el servidor HTTP", {
+        mensaje: error.message,
+      });
+    }
+
+    if (intervaloRevisionPedidos) {
+      clearInterval(intervaloRevisionPedidos);
+      intervaloRevisionPedidos = null;
+
+      logger.info("Intervalo de revision de pedidos vencidos detenido");
+    }
+
+    try {
+      await prisma.$disconnect();
+
+      logger.info("Conexion de Prisma cerrada correctamente");
+    } catch (prismaError) {
+      logger.error("Error al cerrar Prisma", {
+        mensaje: prismaError.message,
+      });
+    }
+
+    clearTimeout(cierreForzado);
+
+    process.exit(error ? 1 : 0);
+  });
+}
+
+process.on("SIGTERM", () => cerrarServidor("SIGTERM"));
+process.on("SIGINT", () => cerrarServidor("SIGINT"));
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Promesa rechazada no controlada", {
+    mensaje: reason instanceof Error ? reason.message : String(reason),
+    stack:
+      process.env.NODE_ENV !== "production" && reason instanceof Error
+        ? reason.stack
+        : undefined,
+  });
+
+  cerrarServidor("unhandledRejection");
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Excepcion no controlada", {
+    mensaje: error.message,
+    stack:
+      process.env.NODE_ENV !== "production"
+        ? error.stack
+        : undefined,
+  });
+
+  cerrarServidor("uncaughtException");
 });
 
