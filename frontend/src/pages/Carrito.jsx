@@ -17,6 +17,7 @@ import {
 } from "../services/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ProductoDetalleLink from "../components/ProductoDetalleLink";
 import { useAuth } from "../context/AuthContext";
 import {
   obtenerCarritoInvitado,
@@ -435,7 +436,7 @@ function Carrito() {
 
                     <div className="p-5 grid grid-cols-1 md:grid-cols-[130px_1fr_150px] gap-5 items-center">
                       {/* Imagen */}
-                      <Link to={`/producto/${producto.id}`}>
+                      <ProductoDetalleLink productoId={producto.id}>
                         <div className="h-32 bg-gray-50 rounded-xl flex items-center justify-center p-3">
                           <img
                             src={producto.imagen}
@@ -443,7 +444,7 @@ function Carrito() {
                             className="max-h-full max-w-full object-contain"
                           />
                         </div>
-                      </Link>
+                      </ProductoDetalleLink>
 
                       {/* Info */}
                       <div>
@@ -451,11 +452,11 @@ function Carrito() {
                           {producto.marca}
                         </p>
 
-                        <Link to={`/producto/${producto.id}`}>
+                        <ProductoDetalleLink productoId={producto.id}>
                           <h2 className="text-base font-bold text-gray-900 mt-1 hover:text-black">
                             {producto.nombre}
                           </h2>
-                        </Link>
+                        </ProductoDetalleLink>
 
                         <p className="text-sm text-gray-500 mt-1">
                           Categoría: {producto.categoria}

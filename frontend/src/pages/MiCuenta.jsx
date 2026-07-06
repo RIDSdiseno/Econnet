@@ -29,6 +29,7 @@ import {
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ProductoDetalleLink from "../components/ProductoDetalleLink";
 import { useAuth } from "../context/AuthContext";
 import {
   obtenerDirecciones,
@@ -1480,7 +1481,7 @@ function MiCuenta() {
                           key={favorito.id}
                           className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
                         >
-                          <Link to={`/producto/${producto.id}`}>
+                          <ProductoDetalleLink productoId={producto.id}>
                             <div className="h-48 bg-gray-100 flex items-center justify-center p-5">
                               <img
                                 src={
@@ -1495,18 +1496,18 @@ function MiCuenta() {
                                 }}
                               />
                             </div>
-                          </Link>
+                          </ProductoDetalleLink>
 
                           <div className="p-5">
                             <p className="text-xs font-bold text-emerald-600 uppercase">
                               {producto.marca?.nombre || "Econnet"}
                             </p>
 
-                            <Link to={`/producto/${producto.id}`}>
+                            <ProductoDetalleLink productoId={producto.id}>
                               <h3 className="text-lg font-black text-gray-900 mt-1 hover:underline">
                                 {producto.nombre || "Producto sin nombre"}
                               </h3>
-                            </Link>
+                            </ProductoDetalleLink>
 
                             <p className="text-sm text-gray-500 mt-1">
                               {producto.categoria?.nombre || "Sin categoría"}
@@ -1517,8 +1518,8 @@ function MiCuenta() {
                             </p>
 
                             <div className="flex gap-3 mt-5">
-                              <Link
-                                to={`/producto/${producto.id}`}
+                              <ProductoDetalleLink
+                                productoId={producto.id}
                                 className="flex-1"
                               >
                                 <Button
@@ -1528,7 +1529,7 @@ function MiCuenta() {
                                 >
                                   Ver producto
                                 </Button>
-                              </Link>
+                              </ProductoDetalleLink>
 
                               <Button
                                 size="large"

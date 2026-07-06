@@ -12,6 +12,7 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
+import ProductoDetalleLink from "./ProductoDetalleLink";
 
 const imagenFallback = "/img/productos/producto.png";
 
@@ -80,7 +81,7 @@ function ProductoCard({ producto, cargandoCarrito, onAgregarCarrito }) {
 
   return (
     <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden h-full group">
-      <Link to={`/producto/${producto.id}`}>
+      <ProductoDetalleLink productoId={producto.id}>
         <div className="relative h-44 bg-white flex items-center justify-center p-4">
           <img
             src={producto.imagen}
@@ -119,18 +120,18 @@ function ProductoCard({ producto, cargandoCarrito, onAgregarCarrito }) {
             )}
           </div>
         </div>
-      </Link>
+      </ProductoDetalleLink>
 
       <div className="p-4 pt-2">
         <h3 className="text-sm font-bold text-gray-900 uppercase line-clamp-1">
           {producto.marca}
         </h3>
 
-        <Link to={`/producto/${producto.id}`}>
+        <ProductoDetalleLink productoId={producto.id}>
           <p className="text-xs text-gray-600 mt-1 line-clamp-2 min-h-[34px] hover:text-gray-950 transition">
             {producto.nombre}
           </p>
-        </Link>
+        </ProductoDetalleLink>
 
         <div className="mt-3 min-h-[24px]">
           {mostrarPrecioNormal && (

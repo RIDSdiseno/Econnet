@@ -20,6 +20,8 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
+import { normalizarProductoId } from "../utils/productoId";
+import ProductoDetalleLink from "../components/ProductoDetalleLink";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -82,7 +84,7 @@ function ProductosRelacionadosCarrusel({
                   key={producto.id}
                   className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group"
                 >
-                  <Link to={`/producto/${producto.id}`}>
+                  <ProductoDetalleLink productoId={producto.id}>
                     <div className="h-40 bg-white flex items-center justify-center p-4">
                       <img
                         src={obtenerImagenPrincipalProducto(producto)}
@@ -90,18 +92,18 @@ function ProductosRelacionadosCarrusel({
                         className="max-h-full max-w-full object-contain transition duration-300 group-hover:scale-105"
                       />
                     </div>
-                  </Link>
+                  </ProductoDetalleLink>
 
                   <div className="p-4 pt-2">
                     <p className="text-sm font-black text-gray-900 uppercase">
                       {producto.marca?.nombre || "Sin marca"}
                     </p>
 
-                    <Link to={`/producto/${producto.id}`}>
+                    <ProductoDetalleLink productoId={producto.id}>
                       <p className="text-xs text-gray-600 mt-1 line-clamp-2 min-h-[34px] hover:text-gray-900">
                         {producto.nombre}
                       </p>
-                    </Link>
+                    </ProductoDetalleLink>
 
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
@@ -117,11 +119,11 @@ function ProductosRelacionadosCarrusel({
                       {formatearPrecio(producto.precio)}
                     </p>
 
-                    <Link to={`/producto/${producto.id}`}>
+                    <ProductoDetalleLink productoId={producto.id}>
                       <button className="mt-4 w-full h-10 rounded-xl bg-gray-950 text-white text-sm font-bold hover:bg-black transition">
                         Ver producto
                       </button>
-                    </Link>
+                    </ProductoDetalleLink>
                   </div>
                 </article>
               ))}
@@ -229,12 +231,24 @@ function DetalleProducto() {
   const [cargandoCarrito, setCargandoCarrito] = useState(false);
 
   useEffect(() => {
+    const productoId = normalizarProductoId(id);
+
+    if (!productoId) {
+      setProducto(null);
+      setProductosRelacionados([]);
+      setImagenSeleccionada("");
+      setError("El producto solicitado no es válido.");
+      setCargando(false);
+      return;
+    }
+
     const cargarProducto = async () => {
       try {
         setCargando(true);
+        setError("");
 
         const [productoApi, productosApi] = await Promise.all([
-          obtenerProductoPorId(id),
+          obtenerProductoPorId(productoId),
           obtenerProductos({ limit: 100 }),
         ]);
 
@@ -267,7 +281,15 @@ function DetalleProducto() {
         if (import.meta.env.DEV) {
           console.error(error);
         }
-        setError("No se pudo cargar el producto");
+
+        setProducto(null);
+        setImagenSeleccionada("");
+
+        if (error.status === 404) {
+          setError("El producto no fue encontrado.");
+        } else {
+          setError("No se pudo cargar el producto.");
+        }
       } finally {
         setCargando(false);
       }
@@ -278,7 +300,9 @@ function DetalleProducto() {
 
   useEffect(() => {
     const cargarFavorito = async () => {
-      if (!token || !estaLogueado || !id) {
+      const productoId = normalizarProductoId(id);
+
+      if (!token || !estaLogueado || !productoId) {
         setEsFavorito(false);
         return;
       }
@@ -287,7 +311,7 @@ function DetalleProducto() {
         const favoritos = await obtenerFavoritos(token);
 
         const existe = favoritos.some(
-          (favorito) => Number(favorito.productoId) === Number(id),
+          (favorito) => Number(favorito.productoId) === productoId,
         );
 
         setEsFavorito(existe);

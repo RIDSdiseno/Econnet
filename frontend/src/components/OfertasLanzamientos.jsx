@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { message } from "antd";
 import { ShoppingCartOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
 import { obtenerProductos, agregarProductoCarrito } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
+import ProductoDetalleLink from "./ProductoDetalleLink";
 
 const imagenFallback = "/img/productos/default-producto.png";
 
@@ -76,7 +76,7 @@ function OfertaSmall({ item, cargandoCarrito, onAgregarCarrito }) {
 
   return (
     <article className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden group flex flex-col h-[405px]">
-      <Link to={`/producto/${item.id}`}>
+      <ProductoDetalleLink productoId={item.id}>
         <div className="relative h-52 bg-white flex items-center justify-center p-4 shrink-0">
           <img
             src={item.imagen}
@@ -115,14 +115,14 @@ function OfertaSmall({ item, cargandoCarrito, onAgregarCarrito }) {
             )}
           </div>
         </div>
-      </Link>
+      </ProductoDetalleLink>
 
       <div className="p-4 flex flex-col flex-1">
         <p className="text-xs uppercase font-semibold text-gray-700 mb-1">
           {item.marca}
         </p>
 
-        <Link to={`/producto/${item.id}`}>
+        <ProductoDetalleLink productoId={item.id}>
           <h3
             className="text-sm text-gray-900 leading-snug min-h-[58px] max-h-[58px] hover:text-gray-950"
             style={{
@@ -134,7 +134,7 @@ function OfertaSmall({ item, cargandoCarrito, onAgregarCarrito }) {
           >
             {item.nombre}
           </h3>
-        </Link>
+        </ProductoDetalleLink>
 
         <div className="mt-auto">
           <div className="min-h-[22px] mb-1">
@@ -179,8 +179,8 @@ function OfertaSmall({ item, cargandoCarrito, onAgregarCarrito }) {
 function OfertaWide({ item }) {
   if (item.tieneOfertaWide) {
     return (
-      <Link
-        to={`/producto/${item.id}`}
+      <ProductoDetalleLink
+        productoId={item.id}
         className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition block bg-white h-[405px]"
       >
         <img
@@ -191,7 +191,7 @@ function OfertaWide({ item }) {
             e.currentTarget.src = imagenFallback;
           }}
         />
-      </Link>
+      </ProductoDetalleLink>
     );
   }
 
@@ -199,8 +199,8 @@ function OfertaWide({ item }) {
     item.enOferta && item.precioNormal && item.precioNormal > item.precio;
 
   return (
-    <Link
-      to={`/producto/${item.id}`}
+    <ProductoDetalleLink
+      productoId={item.id}
       className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition bg-slate-900 text-white h-[405px] flex items-center p-8 relative"
     >
       <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-700" />
@@ -239,7 +239,7 @@ function OfertaWide({ item }) {
           }}
         />
       </div>
-    </Link>
+    </ProductoDetalleLink>
   );
 }
 

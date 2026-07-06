@@ -183,11 +183,18 @@ export const obtenerProductos = async (req, res) => {
 
 export const obtenerProductoPorId = async (req, res) => {
     try {
-        const { id } = req.params;
+        const productoId = Number(req.params.id);
+
+        if (!Number.isInteger(productoId) || productoId <= 0) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: "El ID del producto no es válido",
+            });
+        }
 
         const producto = await prisma.producto.findUnique({
             where: {
-                id: Number(id),
+                id: productoId,
             },
             include: {
                 categoria: true,
@@ -846,43 +853,43 @@ export const eliminarImagenProducto = async (req, res) => {
 };
 
 export const obtenerProductosDestacados = async (req, res) => {
-  try {
-    const productos = await prisma.producto.findMany({
-      where: {
-        activo: true,
-        destacado: true,
-      },
-      include: {
-        categoria: true,
-        marca: true,
-        imagenes: {
-          orderBy: [
-            { esPrincipal: "desc" },
-            { orden: "asc" },
-          ],
-        },
-        especificaciones: {
-          orderBy: {
-            orden: "asc",
-          },
-        },
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-      take: 8,
-    });
+    try {
+        const productos = await prisma.producto.findMany({
+            where: {
+                activo: true,
+                destacado: true,
+            },
+            include: {
+                categoria: true,
+                marca: true,
+                imagenes: {
+                    orderBy: [
+                        { esPrincipal: "desc" },
+                        { orden: "asc" },
+                    ],
+                },
+                especificaciones: {
+                    orderBy: {
+                        orden: "asc",
+                    },
+                },
+            },
+            orderBy: {
+                updatedAt: "desc",
+            },
+            take: 8,
+        });
 
-    return res.json({
-      ok: true,
-      productos,
-    });
-  } catch (error) {
-    logger.error("Error al obtener productos destacados:", serializeError(error));
+        return res.json({
+            ok: true,
+            productos,
+        });
+    } catch (error) {
+        logger.error("Error al obtener productos destacados:", serializeError(error));
 
-    return res.status(500).json({
-      ok: false,
-      mensaje: "Error al obtener productos destacados",
-    });
-  }
+        return res.status(500).json({
+            ok: false,
+            mensaje: "Error al obtener productos destacados",
+        });
+    }
 };

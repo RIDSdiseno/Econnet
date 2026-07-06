@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import ProductoDetalleLink from "../components/ProductoDetalleLink";
 import {
   obtenerProductos,
   obtenerCategorias,
@@ -231,7 +232,7 @@ function ProductoCard({
   return (
     <article className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group h-full">
       <div className="relative">
-        <Link to={`/producto/${producto.id}`}>
+        <ProductoDetalleLink productoId={producto.id}>
           <div className="h-44 bg-white flex items-center justify-center p-4">
             <img
               src={producto.imagen}
@@ -242,7 +243,7 @@ function ProductoCard({
               }}
             />
           </div>
-        </Link>
+        </ProductoDetalleLink>
 
         <button
           type="button"
@@ -276,11 +277,11 @@ function ProductoCard({
           {producto.marca}
         </h3>
 
-        <Link to={`/producto/${producto.id}`}>
+        <ProductoDetalleLink productoId={producto.id}>
           <p className="text-sm text-gray-600 mt-1 line-clamp-3 min-h-[60px] hover:text-gray-900">
             {producto.nombre}
           </p>
-        </Link>
+        </ProductoDetalleLink>
 
         <div className="mt-3 flex items-center gap-2">
           {producto.descuento > 0 && (

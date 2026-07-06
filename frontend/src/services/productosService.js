@@ -1,4 +1,5 @@
 import { apiRequest } from "./httpClient";
+import { normalizarProductoId } from "../utils/productoId";
 
 const crearQueryProductos = (parametros = {}) => {
   const params = new URLSearchParams();
@@ -50,7 +51,15 @@ export const obtenerProductos = async (parametros = {}) => {
 };
 
 export const obtenerProductoPorId = async (id) => {
-  const data = await apiRequest(`/productos/${id}`, {
+  const productoId = normalizarProductoId(id);
+
+  if (!productoId) {
+    const error = new Error("El ID del producto no es válido");
+    error.status = 400;
+    throw error;
+  }
+
+  const data = await apiRequest(`/productos/${productoId}`, {
     errorMessage: "Error al obtener el producto",
   });
 
