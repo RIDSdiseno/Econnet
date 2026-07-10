@@ -574,7 +574,7 @@ function Contacto() {
                 <div>
                   <p className="font-black text-gray-900">Correo</p>
 
-                  <p className="text-sm text-gray-600">contacto@econnet.cl</p>
+                  <p className="text-sm text-gray-600">carenas@rids.cl</p>
                 </div>
               </div>
 
@@ -586,7 +586,7 @@ function Contacto() {
                 <div>
                   <p className="font-black text-gray-900">Teléfono</p>
 
-                  <p className="text-sm text-gray-600">+56 9 1234 5678</p>
+                  <p className="text-sm text-gray-600">+569 8807 6593</p>
                 </div>
               </div>
 

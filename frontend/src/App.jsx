@@ -7,6 +7,7 @@ import DetalleProducto from "./pages/DetalleProducto";
 import Carrito from "./pages/Carrito";
 import QuienesSomos from "./pages/QuienesSomos";
 import ScrollToTop from "./components/ScrollToTop";
+import WhatsAppFloatingButton from "./components/WhatsAppFloatingButton";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import MiCuenta from "./pages/MiCuenta";
@@ -91,6 +92,8 @@ function App() {
             <Route path="soporte/:id" element={<AdminDetalleSoporte />} />
           </Route>
         </Routes>
+
+        <WhatsAppFloatingButton />
       </AuthProvider>
     </BrowserRouter>
   );
