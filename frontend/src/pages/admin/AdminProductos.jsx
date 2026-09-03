@@ -69,6 +69,19 @@ function calcularDescuentoOferta(precioNormal, precioFinal) {
   return Math.round(((normal - final) / normal) * 100);
 }
 
+function normalizarFormatoOferta(formatoOferta) {
+  const formatos = {
+    small: "small",
+    large: "large",
+    wide: "large",
+    "Oferta grande": "large",
+    "Oferta pequeña": "small",
+    "Oferta chica": "small",
+  };
+
+  return formatos[formatoOferta] || "small";
+}
+
 function obtenerImagenesProducto(producto) {
   return (
     producto?.imagenes
@@ -216,7 +229,7 @@ function AdminProductos() {
       etiquetaDisponibilidad: producto.etiquetaDisponibilidad || "",
 
       mostrarEnOfertas: producto.mostrarEnOfertas || false,
-      formatoOferta: producto.formatoOferta || "small",
+      formatoOferta: normalizarFormatoOferta(producto.formatoOferta),
       ordenOferta: producto.ordenOferta || 0,
     });
 
@@ -308,7 +321,7 @@ function AdminProductos() {
         etiquetaDisponibilidad: valores.etiquetaDisponibilidad || "",
 
         mostrarEnOfertas: valores.mostrarEnOfertas || false,
-        formatoOferta: valores.formatoOferta || "small",
+        formatoOferta: normalizarFormatoOferta(valores.formatoOferta),
         ordenOferta: valores.ordenOferta || 0,
       };
       const especificacionesLimpias = especificacionesEditables
@@ -866,8 +879,8 @@ function AdminProductos() {
               <Form.Item label="Formato en ofertas" name="formatoOferta">
                 <Select
                   options={[
-                    { value: "small", label: "Tarjeta pequeña" },
-                    { value: "wide", label: "Oferta grande" },
+                    { value: "small", label: "Oferta pequeña" },
+                    { value: "large", label: "Oferta grande" },
                   ]}
                 />
               </Form.Item>

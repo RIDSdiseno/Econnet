@@ -36,9 +36,22 @@ function obtenerImagenOfertaWide(producto) {
   return ofertaWide?.url || null;
 }
 
+function normalizarFormatoOfertaVisual(formatoOferta) {
+  if (formatoOferta === "large" || formatoOferta === "wide") {
+    return "large";
+  }
+
+  if (formatoOferta === "small") {
+    return "small";
+  }
+
+  return "small";
+}
+
 function adaptarProducto(producto, tipo) {
   if (!producto) return null;
 
+  const formatoVisual = normalizarFormatoOfertaVisual(tipo);
   const imagenOfertaWide = obtenerImagenOfertaWide(producto);
   const precioActual = Number(producto.precio) || 0;
   const precioNormal = Number(producto.precioNormal) || null;
@@ -51,11 +64,11 @@ function adaptarProducto(producto, tipo) {
     precioNormal,
     descuento: Number(producto.descuento) || 0,
     imagen:
-      tipo === "wide"
+      formatoVisual === "large"
         ? imagenOfertaWide || obtenerImagenCard(producto)
         : obtenerImagenCard(producto),
     slug: producto.slug,
-    tipo,
+    tipo: formatoVisual,
     tieneOfertaWide: Boolean(imagenOfertaWide),
     disponible: producto.stock > 0,
 
@@ -268,24 +281,26 @@ function OfertasLanzamientos() {
             return new Date(b.updatedAt) - new Date(a.updatedAt);
           });
 
-        const productosWide = productosEnOfertas.filter(
-          (producto) => producto.formatoOferta === "wide",
+        const productosLarge = productosEnOfertas.filter(
+          (producto) =>
+            normalizarFormatoOfertaVisual(producto.formatoOferta) === "large",
         );
 
         const productosSmall = productosEnOfertas.filter(
-          (producto) => producto.formatoOferta !== "wide",
+          (producto) =>
+            normalizarFormatoOfertaVisual(producto.formatoOferta) === "small",
         );
 
-        const wide1 = productosWide[0];
-        const wide2 = productosWide[1];
+        const large1 = productosLarge[0];
+        const large2 = productosLarge[1];
 
         const smalls = productosSmall.slice(0, 4);
 
         const productosAdaptados = [
           adaptarProducto(smalls[0], "small"),
           adaptarProducto(smalls[1], "small"),
-          adaptarProducto(wide1, "wide"),
-          adaptarProducto(wide2, "wide"),
+          adaptarProducto(large1, "large"),
+          adaptarProducto(large2, "large"),
           adaptarProducto(smalls[2], "small"),
           adaptarProducto(smalls[3], "small"),
         ].filter(Boolean);
@@ -356,7 +371,7 @@ function OfertasLanzamientos() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {ofertas.map((item, index) =>
-          item.tipo === "wide" ? (
+          item.tipo === "large" ? (
             <div
               key={`${item.id}-${index}`}
               className="md:col-span-4 lg:col-span-4"
