@@ -363,7 +363,7 @@ function Checkout() {
     );
 
     const descuentoBienvenida = tieneDescuentoBienvenida
-      ? Math.round(subtotal * 0.1)
+      ? Math.round(subtotal * 0.03)
       : 0;
 
     const despacho = despachoCalculado?.precio || 0;
@@ -1243,7 +1243,7 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
               {tieneDescuentoBienvenida && (
                 <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3">
                   <p className="text-sm font-bold text-emerald-700">
-                    Tienes 10% de descuento de bienvenida activo.
+                    Tienes 3% de descuento de bienvenida activo.
                   </p>
                 </div>
               )}
@@ -1294,7 +1294,7 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
                 {resumen.descuentoBienvenida > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="font-bold text-gray-700">
-                      Descuento bienvenida 10%
+                      Descuento bienvenida 3%
                     </span>
 
                     <span className="font-bold text-emerald-600">

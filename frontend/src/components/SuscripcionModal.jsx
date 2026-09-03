@@ -111,11 +111,11 @@ function SuscripcionModal() {
 
         <div className="relative z-10 px-8 py-12 min-h-[520px] flex flex-col justify-center text-center">
           <h2 className="text-3xl font-black text-gray-950 leading-tight mb-6 drop-shadow-sm">
-            Suscríbete y accede a un 10% de descuento de bienvenida
+            Suscríbete y accede a un 3% de descuento de bienvenida
           </h2>
 
           <p className="text-gray-800 text-base leading-relaxed mb-7 drop-shadow-sm">
-            Suscríbete con tu correo y recibe un 10% de descuento en tu primera
+            Suscríbete con tu correo y recibe un 3% de descuento en tu primera
             compra, además de promociones, ofertas especiales y novedades de
             Econnet.
           </p>
@@ -145,7 +145,7 @@ function SuscripcionModal() {
 
           <p className="text-xs text-gray-700 leading-relaxed mt-7 drop-shadow-sm">
             Al registrarte, aceptas recibir promociones, ofertas especiales,
-            novedades de Econnet y tu beneficio de 10% de descuento de
+            novedades de Econnet y tu beneficio de 3% de descuento de
             bienvenida.
           </p>
         </div>

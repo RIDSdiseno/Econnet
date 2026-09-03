@@ -292,7 +292,7 @@ model NewsletterSuscriptor {
   email                     String    @unique
   activo                    Boolean   @default(true)
   codigoDescuento           String?
-  descuentoPorcentaje       Int       @default(10)
+  descuentoPorcentaje       Int       @default(3)
   usado                     Boolean   @default(false)
   unsubscribeToken          String?   @unique
   unsubscribeTokenCreatedAt DateTime? @db.Timestamp(6)

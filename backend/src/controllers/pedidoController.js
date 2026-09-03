@@ -337,7 +337,7 @@ export const crearPedido = async (req, res) => {
         usuario.descuentoBienvenidaUsado === false;
 
       const descuento = aplicaDescuentoBienvenida
-        ? Math.round(subtotal * 0.1)
+        ? Math.round(subtotal * 0.03)
         : 0;
 
       const tarifaDespacho = await obtenerTarifaDespacho(

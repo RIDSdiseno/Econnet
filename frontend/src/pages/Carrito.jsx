@@ -300,7 +300,7 @@ function Carrito() {
     );
 
     const descuentoBienvenida = tieneDescuentoBienvenida
-      ? Math.round(subtotal * 0.1)
+      ? Math.round(subtotal * 0.03)
       : 0;
 
     const total = subtotal - descuentoBienvenida;
@@ -388,7 +388,7 @@ function Carrito() {
               <Alert
                 type="success"
                 message="Descuento de bienvenida activo"
-                description={`Se aplicará un 10% de descuento en tu primera compra: -${formatearPrecio(
+                description={`Se aplicará un 3% de descuento en tu primera compra: -${formatearPrecio(
                   resumen.descuentoBienvenida,
                 )}.`}
                 showIcon
@@ -568,7 +568,7 @@ function Carrito() {
                 {resumen.descuentoBienvenida > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="font-bold text-gray-700">
-                      Descuento bienvenida 10%
+                      Descuento bienvenida 3%
                     </span>
 
                     <span className="font-bold text-emerald-600">

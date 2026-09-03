@@ -7,7 +7,7 @@ function validarEmail(email) {
 }
 
 function generarCodigoDescuento() {
-  return "BIENVENIDA10";
+  return "BIENVENIDA3";
 }
 
 function generarUnsubscribeToken() {
@@ -59,7 +59,7 @@ export const suscribirseNewsletter = async (req, res) => {
             ...crearDatosTokenDesuscripcion(),
             codigoDescuento:
               suscriptorExistente.codigoDescuento || generarCodigoDescuento(),
-            descuentoPorcentaje: suscriptorExistente.descuentoPorcentaje || 10,
+            descuentoPorcentaje: suscriptorExistente.descuentoPorcentaje || 3,
           },
         });
 
@@ -85,7 +85,7 @@ export const suscribirseNewsletter = async (req, res) => {
         mensaje: "Este correo ya está suscrito",
         codigoDescuento:
           suscriptorExistente.codigoDescuento || generarCodigoDescuento(),
-        descuentoPorcentaje: suscriptorExistente.descuentoPorcentaje || 10,
+        descuentoPorcentaje: suscriptorExistente.descuentoPorcentaje || 3,
       });
     }
 
@@ -94,7 +94,7 @@ export const suscribirseNewsletter = async (req, res) => {
         email: emailNormalizado,
         activo: true,
         codigoDescuento: generarCodigoDescuento(),
-        descuentoPorcentaje: 10,
+        descuentoPorcentaje: 3,
         usado: false,
         ...crearDatosTokenDesuscripcion(),
       },

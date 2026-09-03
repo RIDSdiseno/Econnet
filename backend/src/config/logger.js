@@ -1,13 +1,15 @@
-import fs from "node:fs";
-import path from "node:path";
 import winston from "winston";
 
 const isProduction = process.env.NODE_ENV === "production";
-const logsDir = path.resolve(process.cwd(), "logs");
+const nivelesValidos = new Set(Object.keys(winston.config.npm.levels));
+const nivelPorDefecto = isProduction ? "info" : "debug";
+const nivelSolicitado = process.env.LOG_LEVEL?.trim().toLowerCase();
+const nivelInvalido =
+  Boolean(nivelSolicitado) && !nivelesValidos.has(nivelSolicitado);
 
-if (isProduction && !fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
-}
+const nivelLogger = nivelInvalido
+  ? nivelPorDefecto
+  : nivelSolicitado || nivelPorDefecto;
 
 const baseFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -30,26 +32,23 @@ const productionFormat = winston.format.combine(
   winston.format.json(),
 );
 
-const transports = isProduction
-  ? [
-      new winston.transports.File({
-        filename: path.join(logsDir, "error.log"),
-        level: "error",
-      }),
-    ]
-  : [
-      new winston.transports.Console({
-        level: process.env.LOG_LEVEL || "debug",
-        format: developmentFormat,
-      }),
-    ];
-
 const logger = winston.createLogger({
-  level: isProduction ? "error" : process.env.LOG_LEVEL || "debug",
+  level: nivelLogger,
   format: isProduction ? productionFormat : developmentFormat,
-  transports,
+  transports: [
+    new winston.transports.Console({
+      level: nivelLogger,
+    }),
+  ],
   exitOnError: false,
 });
+
+if (nivelInvalido) {
+  logger.warn("LOG_LEVEL invalido; se usara el nivel por defecto", {
+    logLevel: nivelSolicitado,
+    nivel: nivelLogger,
+  });
+}
 
 export function serializeError(error) {
   return {
