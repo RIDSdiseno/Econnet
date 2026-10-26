@@ -72,6 +72,7 @@ function Registro() {
         aceptaTerminos: formulario.aceptaTerminos,
         aceptaPromociones: formulario.aceptaPromociones,
         aceptaPublicidad: formulario.aceptaPublicidad,
+        politicaVersion: "v1.0-2026-10",
       });
 
       message.success("Registro realizado correctamente");

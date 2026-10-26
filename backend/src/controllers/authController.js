@@ -30,6 +30,7 @@ export const registrarUsuario = async (req, res) => {
       aceptaTerminos,
       aceptaPromociones,
       aceptaPublicidad,
+      politicaVersion,
     } = req.body;
 
     if (!nombre || !email || !password) {
@@ -84,6 +85,8 @@ export const registrarUsuario = async (req, res) => {
         aceptaTerminos: Boolean(aceptaTerminos),
         aceptaPromociones: Boolean(aceptaPromociones) || tieneDescuentoBienvenida,
         aceptaPublicidad: Boolean(aceptaPublicidad),
+        consentimientoFecha: aceptaTerminos ? new Date() : null,
+        politicaVersion: aceptaTerminos ? (politicaVersion || "v1.0-2026-10") : null,
         descuentoBienvenidaDisponible: tieneDescuentoBienvenida,
         descuentoBienvenidaUsado: false,
         rol: "cliente",

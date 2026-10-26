@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useMeta } from "../hooks/useMeta";
+import { trackViewItemList, trackAddToCart } from "../utils/analytics";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Checkbox, Select, Button, Pagination, message } from "antd";
 import {
@@ -332,6 +334,13 @@ function ProductoCard({
 }
 
 function Productos() {
+  useMeta({
+    title: "Catálogo de productos tecnológicos",
+    description:
+      "Explora nuestro catálogo de notebooks, monitores, almacenamiento, cámaras y más. Filtra por categoría, marca y precio.",
+    canonical: "https://econnet.cl/productos",
+  });
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { token, estaLogueado } = useAuth();
@@ -399,6 +408,7 @@ function Productos() {
         setCategorias(categoriasApi.map((categoria) => categoria.nombre));
         setMarcas(marcasApi.sort((a, b) => a.orden - b.orden));
         setError("");
+        trackViewItemList(productosAdaptados);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.error(error);
@@ -591,6 +601,7 @@ function Productos() {
 
         agregarItemCarritoInvitado(producto.id, 1);
 
+        trackAddToCart(producto, 1);
         message.success("Producto agregado al carrito");
       } catch (error) {
         message.error(error.message || "No se pudo agregar al carrito");
@@ -606,6 +617,7 @@ function Productos() {
 
       await agregarProductoCarrito(token, producto.id);
 
+      trackAddToCart(producto, 1);
       message.success("Producto agregado al carrito");
 
       window.dispatchEvent(new Event("carritoActualizado"));

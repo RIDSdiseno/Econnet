@@ -144,9 +144,25 @@ function SuscripcionModal() {
           </div>
 
           <p className="text-xs text-gray-700 leading-relaxed mt-7 drop-shadow-sm">
-            Al registrarte, aceptas recibir promociones, ofertas especiales,
-            novedades de Econnet y tu beneficio de 3% de descuento de
-            bienvenida.
+            Al suscribirte, aceptas recibir promociones, ofertas especiales y
+            novedades de Econnet. Puedes darte de baja en cualquier momento
+            haciendo clic en el enlace de cada correo o escribiéndonos a{" "}
+            <a
+              href="mailto:privacidad@econnet.cl"
+              className="underline font-semibold"
+            >
+              privacidad@econnet.cl
+            </a>
+            . Tratamos tus datos según nuestra{" "}
+            <a
+              href="/politicas-privacidad"
+              className="underline font-semibold"
+              target="_blank"
+              rel="noreferrer"
+            >
+              política de privacidad
+            </a>
+            .
           </p>
         </div>
       </div>

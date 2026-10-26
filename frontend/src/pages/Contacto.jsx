@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useMeta } from "../hooks/useMeta";
+
+const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL || "contacto@econnet.cl";
+const CONTACT_PHONE = import.meta.env.VITE_CONTACT_PHONE || "+56 9 XXXX XXXX";
 import { Link } from "react-router-dom";
 import { Alert, Button, Checkbox, Input, message, Select } from "antd";
 import {
@@ -88,6 +92,13 @@ function formatearFechaPedido(fecha) {
 }
 
 function Contacto() {
+  useMeta({
+    title: "Contacto",
+    description:
+      "Contáctate con Econnet. Responderemos tu consulta a la brevedad por correo, teléfono o WhatsApp.",
+    canonical: "https://econnet.cl/contacto",
+  });
+
   const { usuario, token, cargandoAuth } = useAuth();
   const formularioRef = useRef(null);
 
@@ -574,7 +585,7 @@ function Contacto() {
                 <div>
                   <p className="font-black text-gray-900">Correo</p>
 
-                  <p className="text-sm text-gray-600">carenas@rids.cl</p>
+                  <p className="text-sm text-gray-600">{CONTACT_EMAIL}</p>
                 </div>
               </div>
 
@@ -586,7 +597,7 @@ function Contacto() {
                 <div>
                   <p className="font-black text-gray-900">Teléfono</p>
 
-                  <p className="text-sm text-gray-600">+569 8807 6593</p>
+                  <p className="text-sm text-gray-600">{CONTACT_PHONE}</p>
                 </div>
               </div>
 

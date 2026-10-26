@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Link,
   useLocation,
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
+import { trackPurchase } from "../utils/analytics";
 import { Alert, Button, Result, Tag, message } from "antd";
 import {
   CheckCircleOutlined,
@@ -136,6 +137,8 @@ function CompraExitosa() {
   const [cargandoPedido, setCargandoPedido] = useState(true);
   const [descargandoDocumento, setDescargandoDocumento] = useState(false);
 
+  const purchaseTrackedRef = useRef(false);
+
   useEffect(() => {
     const cargarPedido = async () => {
       if (cargandoAuth) return;
@@ -176,6 +179,14 @@ function CompraExitosa() {
 
     cargarPedido();
   }, [pedidoId, ordenWebpay, token, estaLogueado, cargandoAuth]);
+
+  // GA4 purchase + Meta Pixel Purchase — solo cuando el pago es aprobado
+  useEffect(() => {
+    if (!pedido || purchaseTrackedRef.current) return;
+    if (pedido.estadoPago !== "aprobado") return;
+    purchaseTrackedRef.current = true;
+    trackPurchase(pedido);
+  }, [pedido]);
 
   const handleDescargarDocumento = async () => {
     if (!pedido?.id) {

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button, Input, Radio, Select, Divider, message } from "antd";
+import { trackBeginCheckout, trackAddPaymentInfo } from "../utils/analytics";
+import { Button, Checkbox, Input, Radio, Select, Divider, message } from "antd";
 import {
   ArrowLeftOutlined,
   HomeOutlined,
@@ -121,6 +122,9 @@ function Checkout() {
   const [medioPagoSeleccionadoId, setMedioPagoSeleccionadoId] = useState("");
 
   const [procesandoCompra, setProcesandoCompra] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+
+  const beginCheckoutTrackedRef = useRef(false);
 
   const [despachoCalculado, setDespachoCalculado] = useState({
     codigo: "RETIRO",
@@ -356,6 +360,22 @@ function Checkout() {
     cargarMediosPago();
   }, [token, estaLogueado]);
 
+  // GA4 begin_checkout — se dispara una sola vez cuando el carrito está listo
+  useEffect(() => {
+    if (
+      productosCheckout.length === 0 ||
+      cargandoCheckout ||
+      beginCheckoutTrackedRef.current
+    )
+      return;
+    beginCheckoutTrackedRef.current = true;
+    const value = productosCheckout.reduce(
+      (sum, p) => sum + p.precio * p.cantidad,
+      0,
+    );
+    trackBeginCheckout(productosCheckout, value);
+  }, [productosCheckout, cargandoCheckout]);
+
   const resumen = useMemo(() => {
     const subtotal = productosCheckout.reduce(
       (total, producto) => total + producto.precio * producto.cantidad,
@@ -440,6 +460,11 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
       return;
     }
 
+    if (!aceptaTerminos) {
+      message.warning("Debes aceptar los términos y la política de privacidad para continuar");
+      return;
+    }
+
     if (
       estaLogueado &&
       datos.tipoEntrega === "despacho" &&
@@ -494,6 +519,8 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
     try {
       setProcesandoCompra(true);
 
+      trackAddPaymentInfo(productosCheckout, resumen.total, datos.metodoPago);
+
       const payloadPedido = {
         direccionId:
           estaLogueado && datos.tipoEntrega === "despacho"
@@ -545,6 +572,8 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
               ciudadFacturacion: datosFacturacion.ciudadFacturacion.trim(),
             }
           : {}),
+
+        politicaVersion: "v1.0-2026-10",
       };
 
       const pedido = await crearPedido(token, payloadPedido);
@@ -1347,13 +1376,31 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
                 </p>
               </div>
 
+              <div className="mt-5">
+                <Checkbox
+                  checked={aceptaTerminos}
+                  onChange={(e) => setAceptaTerminos(e.target.checked)}
+                >
+                  <span className="text-sm text-gray-700">
+                    He leído y acepto los{" "}
+                    <Link to="/terminos-condiciones" className="font-bold underline" target="_blank">
+                      términos y condiciones
+                    </Link>{" "}
+                    y la{" "}
+                    <Link to="/politicas-privacidad" className="font-bold underline" target="_blank">
+                      política de privacidad
+                    </Link>
+                  </span>
+                </Checkbox>
+              </div>
+
               <Button
                 block
                 size="large"
                 loading={procesandoCompra}
-                disabled={productosCheckout.length === 0}
+                disabled={productosCheckout.length === 0 || !aceptaTerminos}
                 onClick={finalizarCompra}
-                className="!h-14 !mt-6 !rounded-2xl !bg-gray-950 !text-white !border-gray-950 !font-black hover:!bg-black disabled:!bg-gray-300"
+                className="!h-14 !mt-4 !rounded-2xl !bg-gray-950 !text-white !border-gray-950 !font-black hover:!bg-black disabled:!bg-gray-300"
               >
                 {datos.metodoPago === "mercadopago"
                   ? "Pagar con Mercado Pago"

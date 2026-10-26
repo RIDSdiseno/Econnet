@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useMeta } from '../hooks/useMeta'
 import { Link } from 'react-router-dom'
 import { Collapse, Input, Button } from 'antd'
 import {
@@ -111,6 +112,13 @@ const preguntasFrecuentes = [
 ]
 
 function CentroAyuda() {
+  useMeta({
+    title: 'Centro de ayuda',
+    description:
+      'Resuelve tus dudas sobre compras, despachos, garantías, pagos y devoluciones en Econnet.',
+    canonical: 'https://econnet.cl/centro-ayuda',
+  })
+
   const [busqueda, setBusqueda] = useState('')
 
   const categoriasFiltradas = categoriasAyuda.filter((categoria) =>

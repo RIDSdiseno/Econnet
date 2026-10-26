@@ -122,6 +122,8 @@ export const crearPedido = async (req, res) => {
       direccionFacturacion,
       comunaFacturacion,
       ciudadFacturacion,
+
+      politicaVersion,
     } = req.body;
 
     const usuarioAutenticado = req.usuario || null;
@@ -431,6 +433,9 @@ export const crearPedido = async (req, res) => {
           neto,
           iva,
           total,
+
+          consentimientoFecha: new Date(),
+          politicaVersion: politicaVersion || "v1.0-2026-10",
 
           items: {
             create: itemsPedido.map((item) => ({

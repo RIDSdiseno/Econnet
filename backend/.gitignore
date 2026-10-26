@@ -25,3 +25,9 @@ temp/
 .tmp/
 .DS_Store
 Thumbs.db
+
+# Scripts with credentials
+reset-pass.mjs
+
+# Build artifacts
+../frontend/dist.zip

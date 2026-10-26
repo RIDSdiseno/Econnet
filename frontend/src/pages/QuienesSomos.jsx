@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useMeta } from '../hooks/useMeta'
 import { Collapse } from 'antd'
 import {
   AimOutlined,
@@ -72,6 +73,13 @@ const preguntas = [
 ]
 
 function QuienesSomos() {
+  useMeta({
+    title: "Quiénes somos",
+    description:
+      "Conoce a Econnet, tu tienda de tecnología en Chile. Productos con garantía, despacho a todo el país y atención personalizada.",
+    canonical: "https://econnet.cl/quienes-somos",
+  });
+
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       <Navbar />

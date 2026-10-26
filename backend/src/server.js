@@ -50,6 +50,7 @@ import adminSoporteRoutes from "./routes/adminSoporteRoutes.js";
 import adminProductosVendidosRoutes from "./routes/adminProductosVendidosRoutes.js";
 
 import adminEnvioRoutes from "./routes/adminEnvioRoutes.js";
+import sitemapRoutes from "./routes/sitemapRoutes.js";
 
 const app = express();
 if (process.env.NODE_ENV === "production") {
@@ -149,6 +150,8 @@ app.use("/api/admin/usuarios", adminUsuarioRoutes);
 app.use("/api/admin/soporte", adminSoporteRoutes);
 app.use("/api/admin/productos-vendidos", adminProductosVendidosRoutes);
 app.use("/api/admin/envios", adminEnvioRoutes);
+
+app.use("/", sitemapRoutes);
 
 app.get("/", (req, res) => {
   return res.send("Backend de Econnet funcionando correctamente");

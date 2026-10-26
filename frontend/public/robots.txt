@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /admin/login
+Disallow: /mi-cuenta
+Disallow: /carrito
+Disallow: /checkout
+Disallow: /compra-exitosa
+Disallow: /auth/
+Disallow: /*?_g=*
+Disallow: /*?_gl=*
+
+Sitemap: https://econnet.cl/sitemap.xml

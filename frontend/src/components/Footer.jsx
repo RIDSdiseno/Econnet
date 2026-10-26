@@ -46,6 +46,10 @@ const footerSections = [
         label: "Políticas de privacidad",
         to: "/politicas-privacidad",
       },
+      {
+        label: "Política de cookies",
+        to: "/politica-cookies",
+      },
     ],
   },
   {
@@ -191,8 +195,9 @@ function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="border-t border-gray-700 mt-10 pt-6 text-center text-sm text-gray-400">
-          Copyright © 2026 Econnet.cl. Todos los derechos reservados.
+        <div className="border-t border-gray-700 mt-10 pt-6 text-center text-sm text-gray-400 space-y-1">
+          <p>Econnet SpA · RUT 76.758.352-4 · La Concepción 65, of. 1003, Providencia, Santiago</p>
+          <p>Copyright © 2026 Econnet.cl. Todos los derechos reservados.</p>
         </div>
       </div>
 

@@ -1575,20 +1575,46 @@ function MiCuenta() {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-black text-gray-900">
-                        Preferencias de comunicación
-                      </h3>
+                  <div>
+                    <h3 className="font-black text-gray-900 mb-3">
+                      Preferencias de comunicación
+                    </h3>
 
-                      <p className="text-gray-600 text-sm mt-1">
-                        Administra promociones, novedades y notificaciones.
-                      </p>
+                    <div className="space-y-3">
+                      <Checkbox
+                        checked={usuario?.aceptaPromociones ?? false}
+                        onChange={async (e) => {
+                          try {
+                            await actualizarUsuario({ aceptaPromociones: e.target.checked });
+                            message.success("Preferencia actualizada");
+                          } catch {
+                            message.error("No se pudo actualizar");
+                          }
+                        }}
+                      >
+                        <span className="text-sm text-gray-700">
+                          Recibir promociones, novedades y ofertas personalizadas
+                        </span>
+                      </Checkbox>
+
+                      <br />
+
+                      <Checkbox
+                        checked={usuario?.aceptaPublicidad ?? false}
+                        onChange={async (e) => {
+                          try {
+                            await actualizarUsuario({ aceptaPublicidad: e.target.checked });
+                            message.success("Preferencia actualizada");
+                          } catch {
+                            message.error("No se pudo actualizar");
+                          }
+                        }}
+                      >
+                        <span className="text-sm text-gray-700">
+                          Recibir publicidad de productos relacionados con mis preferencias
+                        </span>
+                      </Checkbox>
                     </div>
-
-                    <button className="text-sm font-bold underline">
-                      Configurar
-                    </button>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useMeta } from "../hooks/useMeta";
 
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Button, Rate, Input, Carousel, message } from "antd";
@@ -20,8 +21,11 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { agregarItemCarritoInvitado } from "../utils/carritoInvitado";
-import { normalizarProductoId } from "../utils/productoId";
+import { normalizarProductoId, slugificarProducto } from "../utils/productoId";
 import ProductoDetalleLink from "../components/ProductoDetalleLink";
+import { trackViewItem, trackAddToCart } from "../utils/analytics";
+
+const SITE_ORIGIN = "https://econnet.cl";
 
 function dividirEnGrupos(lista, cantidad) {
   const grupos = [];
@@ -105,15 +109,21 @@ function ProductosRelacionadosCarrusel({
                       </p>
                     </ProductoDetalleLink>
 
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
-                        {producto.descuento}% DCTO.
-                      </span>
+                    {(producto.descuento > 0 || (producto.precioNormal && producto.precioNormal > producto.precio)) && (
+                      <div className="mt-3 flex items-center gap-2">
+                        {producto.descuento > 0 && (
+                          <span className="text-[10px] font-bold text-blue-700 bg-cyan-100 px-2 py-1 rounded">
+                            {producto.descuento}% DCTO.
+                          </span>
+                        )}
 
-                      <span className="text-xs text-gray-400 line-through">
-                        {formatearPrecio(producto.precioNormal)}
-                      </span>
-                    </div>
+                        {producto.precioNormal > 0 && producto.precioNormal > producto.precio && (
+                          <span className="text-xs text-gray-400 line-through">
+                            {formatearPrecio(producto.precioNormal)}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     <p className="text-lg font-black text-gray-950 mt-2">
                       {formatearPrecio(producto.precio)}
@@ -230,6 +240,78 @@ function DetalleProducto() {
   const [cargandoFavorito, setCargandoFavorito] = useState(false);
   const [cargandoCarrito, setCargandoCarrito] = useState(false);
 
+  // Ref para no refetch cuando solo cambia el slug en la URL (misma ID numérica)
+  const productoIdCargadoRef = useRef(null);
+  // Ref para disparar view_item solo una vez por producto
+  const viewItemTrackedRef = useRef(null);
+
+  const canonicalSlug = producto
+    ? `${normalizarProductoId(id)}-${slugificarProducto(producto.slug || producto.nombre)}`
+    : null;
+
+  const canonicalUrl = canonicalSlug
+    ? `${SITE_ORIGIN}/producto/${canonicalSlug}`
+    : undefined;
+
+  useMeta({
+    title: producto?.nombre || undefined,
+    description: producto
+      ? `${producto.nombre}${producto.marca?.nombre ? ` — ${producto.marca.nombre}` : ""}. ${producto.descripcion || "Disponible en Econnet con despacho a todo Chile."}`
+      : undefined,
+    image: imagenSeleccionada || undefined,
+    type: "product",
+    canonical: canonicalUrl,
+  });
+
+  useEffect(() => {
+    if (!producto) return;
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "jsonld-product";
+    script.text = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: producto.nombre,
+      description: producto.descripcion || producto.nombre,
+      sku: producto.sku || undefined,
+      image: imagenSeleccionada || undefined,
+      brand: { "@type": "Brand", name: producto.marca?.nombre || "Econnet" },
+      offers: {
+        "@type": "Offer",
+        url: window.location.href,
+        priceCurrency: "CLP",
+        price: producto.precio,
+        availability:
+          producto.stock > 0
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+        seller: { "@type": "Organization", name: "Econnet" },
+      },
+    });
+    document.head.appendChild(script);
+    return () => {
+      document.getElementById("jsonld-product")?.remove();
+    };
+  }, [producto, imagenSeleccionada]);
+
+  // Redirige a la URL canónica con slug cuando la URL actual no la tiene
+  useEffect(() => {
+    if (!producto) return;
+    const productoId = normalizarProductoId(id);
+    if (!productoId) return;
+    const slug = `${productoId}-${slugificarProducto(producto.slug || producto.nombre)}`;
+    if (id !== slug) {
+      navigate(`/producto/${slug}`, { replace: true });
+    }
+  }, [producto]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // GA4 view_item + Meta Pixel ViewContent — una sola vez por producto
+  useEffect(() => {
+    if (!producto || viewItemTrackedRef.current === producto.id) return;
+    viewItemTrackedRef.current = producto.id;
+    trackViewItem(producto);
+  }, [producto]);
+
   useEffect(() => {
     const productoId = normalizarProductoId(id);
 
@@ -242,6 +324,9 @@ function DetalleProducto() {
       return;
     }
 
+    // Evita refetch si ya tenemos este producto (ocurre tras el slug redirect)
+    if (productoIdCargadoRef.current === productoId) return;
+
     const cargarProducto = async () => {
       try {
         setCargando(true);
@@ -251,6 +336,7 @@ function DetalleProducto() {
           obtenerProductoPorId(productoId),
           obtenerProductos({ limit: 100 }),
         ]);
+        productoIdCargadoRef.current = productoId;
 
         const imagenesValidas =
           productoApi.imagenes
@@ -370,6 +456,7 @@ function DetalleProducto() {
         agregarItemCarritoInvitado(producto.id, 1);
       }
 
+      trackAddToCart(producto, 1);
       message.success("Producto agregado al carrito");
     } catch (error) {
       message.error(error.message || "No se pudo agregar al carrito");
@@ -601,12 +688,14 @@ function DetalleProducto() {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Descuento</span>
-                  <span className="text-blue-700 bg-cyan-100 px-2 py-1 rounded text-xs font-black">
-                    {descuento}% DCTO.
-                  </span>
-                </div>
+                {descuento > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Descuento</span>
+                    <span className="text-blue-700 bg-cyan-100 px-2 py-1 rounded text-xs font-black">
+                      {descuento}% DCTO.
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-end gap-4 border-t border-gray-200 pt-4">
                   <span className="text-sm font-bold text-gray-900">Total</span>

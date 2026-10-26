@@ -132,6 +132,8 @@ model Usuario {
   aceptaPromociones             Boolean                  @default(false)
   aceptaPublicidad              Boolean                  @default(false)
   aceptaTerminos                Boolean                  @default(false)
+  consentimientoFecha           DateTime?
+  politicaVersion               String?
   rut                           String?                  @unique
   descuentoBienvenidaDisponible Boolean                  @default(false)
   descuentoBienvenidaUsado      Boolean                  @default(false)
@@ -235,6 +237,8 @@ model Pedido {
   errorDocumentoEmail    String?
   fechaVencimientoPago   DateTime?           @db.Timestamp(6)
   stockRestaurado        Boolean             @default(false)
+  consentimientoFecha    DateTime?
+  politicaVersion        String?
   items                  PedidoItem[]
   seguimientos           PedidoSeguimiento[]
   direccion              Direccion?          @relation(fields: [direccionId], references: [id])

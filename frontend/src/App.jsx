@@ -1,5 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
+import { trackPageView } from "./utils/analytics";
+
+function RouteTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+  return null;
+}
 
 import Home from "./pages/Home";
 import Productos from "./pages/Productos";
@@ -18,6 +28,7 @@ import CompraExitosa from "./pages/CompraExitosa";
 import SeguimientoCompra from "./pages/SeguimientoCompra";
 import TerminosCondiciones from "./pages/TerminosCondiciones";
 import PoliticasPrivacidad from "./pages/PoliticasPrivacidad";
+import PoliticaCookies from "./pages/PoliticaCookies";
 import RutaAdmin from "./routes/RutaAdmin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -40,6 +51,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <RouteTracker />
 
         <Routes>
           <Route path="/" element={<Home />} />
@@ -64,6 +76,10 @@ function App() {
           <Route
             path="/politicas-privacidad"
             element={<PoliticasPrivacidad />}
+          />
+          <Route
+            path="/politica-cookies"
+            element={<PoliticaCookies />}
           />
           <Route path="/compra-exitosa" element={<CompraExitosa />} />
 
