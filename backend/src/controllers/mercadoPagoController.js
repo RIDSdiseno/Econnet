@@ -8,7 +8,7 @@ import {
 } from "../config/mercadoPago.js";
 
 import { obtenerInfoEstadoPedido } from "../utils/estadosPedido.js";
-import { enviarDocumentoPedidoPorCorreo } from "../services/emailService.js";
+import { enviarDocumentoPedidoPorCorreo, enviarNotificacionPedidoInterno } from "../services/emailService.js";
 
 function obtenerBackendUrl() {
     return (
@@ -50,13 +50,15 @@ function crearSeguimientoEstado(estado, detalleExtra = "") {
     };
 }
 
-function enviarDocumentoMercadoPagoEnSegundoPlano(pedidoId) {
+function enviarDocumentoMercadoPagoEnSegundoPlano(pedidoId, pedido) {
     if (process.env.EMAIL_ENABLED !== "true") {
         logger.info(
             `Envío de correo desactivado para el pedido ${pedidoId}`,
         );
         return;
     }
+
+    if (pedido) enviarNotificacionPedidoInterno(pedido).catch(() => {});
 
     enviarDocumentoPedidoPorCorreo(pedidoId)
         .then((resultado) => {

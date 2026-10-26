@@ -2,7 +2,7 @@ import logger, { serializeError } from "../config/logger.js";
 import transbankSdk from "transbank-sdk";
 import prisma from "../config/prisma.js";
 import { obtenerInfoEstadoPedido } from "../utils/estadosPedido.js";
-import { enviarDocumentoPedidoPorCorreo } from "../services/emailService.js";
+import { enviarDocumentoPedidoPorCorreo, enviarNotificacionPedidoInterno } from "../services/emailService.js";
 
 const {
   Environment,
@@ -179,13 +179,22 @@ function crearSeguimientoEstado(estado, detalleExtra = "") {
 }
 
 
-function enviarDocumentoPagoEnSegundoPlano(pedidoId) {
+async function enviarNotificacionInternaEnSegundoPlano(pedido) {
+  if (process.env.EMAIL_ENABLED !== "true") return;
+  try {
+    await enviarNotificacionPedidoInterno(pedido);
+  } catch (_) {}
+}
+
+function enviarDocumentoPagoEnSegundoPlano(pedidoId, pedido) {
   if (process.env.EMAIL_ENABLED !== "true") {
     logger.info(
       `Envío de correo desactivado temporalmente para el pedido ${pedidoId}`,
     );
     return;
   }
+
+  if (pedido) enviarNotificacionInternaEnSegundoPlano(pedido);
 
   enviarDocumentoPedidoPorCorreo(pedidoId)
     .then((resultado) => {

@@ -331,6 +331,38 @@ function construirCorreoHtml(pedido) {
   `;
 }
 
+export async function enviarNotificacionPedidoInterno(pedido) {
+  const destino = process.env.PEDIDOS_NOTIF_EMAIL;
+  if (!destino) return;
+  try {
+    const transportador = crearTransportador();
+    const items = (pedido.items || [])
+      .map((i) => `• ${i.nombreProducto} x${i.cantidad} — ${formatearPrecio(i.subtotal)}`)
+      .join("\n");
+    await transportador.sendMail({
+      from: { name: process.env.EMAIL_FROM_NAME || "Econnet", address: process.env.EMAIL_FROM || process.env.SMTP_USER },
+      to: destino,
+      subject: `Nuevo pedido pagado: ${pedido.numero} — ${formatearPrecio(pedido.total)}`,
+      text: [
+        `Nuevo pedido aprobado en Econnet.`,
+        ``,
+        `Pedido: ${pedido.numero}`,
+        `Cliente: ${pedido.nombreCliente} <${pedido.emailCliente}>`,
+        `Teléfono: ${pedido.telefonoCliente || "—"}`,
+        `Método de pago: ${pedido.metodoPago}`,
+        `Total: ${formatearPrecio(pedido.total)}`,
+        ``,
+        `Productos:`,
+        items,
+        ``,
+        `Ver en /admin: https://econnet.cl/admin/pedidos`,
+      ].join("\n"),
+    });
+  } catch (err) {
+    logger.error("Error enviando notificación interna de pedido:", serializeError(err));
+  }
+}
+
 export async function enviarDocumentoPedidoPorCorreo(pedidoId) {
   const id = Number(pedidoId);
 
