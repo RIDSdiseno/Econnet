@@ -334,6 +334,7 @@ function construirCorreoHtml(pedido) {
 export async function enviarNotificacionPedidoInterno(pedido) {
   const destino = process.env.PEDIDOS_NOTIF_EMAIL;
   if (!destino) return;
+  const cc = process.env.PEDIDOS_NOTIF_CC || "";
   try {
     const transportador = crearTransportador();
     const items = (pedido.items || [])
@@ -342,6 +343,7 @@ export async function enviarNotificacionPedidoInterno(pedido) {
     await transportador.sendMail({
       from: { name: process.env.EMAIL_FROM_NAME || "Econnet", address: process.env.EMAIL_FROM || process.env.SMTP_USER },
       to: destino,
+      ...(cc ? { cc } : {}),
       subject: `Nuevo pedido pagado: ${pedido.numero} — ${formatearPrecio(pedido.total)}`,
       text: [
         `Nuevo pedido aprobado en Econnet.`,
