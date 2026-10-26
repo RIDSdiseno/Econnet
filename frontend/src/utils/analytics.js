@@ -1,13 +1,25 @@
 // Helpers centralizados para GA4 (gtag) y Meta Pixel (fbq).
-// Las IDs se inyectan desde index.html vía variables de entorno Vite.
+// Solo disparan eventos si el usuario aceptó cookies.
+
+function consentidoAnalytics() {
+  try {
+    const raw = localStorage.getItem("econnet_cookie_consent");
+    if (!raw) return false;
+    return JSON.parse(raw).aceptado === true;
+  } catch (_) {
+    return false;
+  }
+}
 
 function gaEvent(name, params = {}) {
+  if (!consentidoAnalytics()) return;
   if (typeof window.gtag === "function") {
     window.gtag("event", name, params);
   }
 }
 
 function pixelEvent(name, params = {}) {
+  if (!consentidoAnalytics()) return;
   if (typeof window.fbq === "function") {
     window.fbq("track", name, params);
   }
@@ -27,6 +39,7 @@ function toGA4Item(product, quantity = 1) {
 /** Llamar en cada cambio de ruta; excluye /admin automáticamente. */
 export function trackPageView(pathname) {
   if (pathname.startsWith("/admin")) return;
+  if (!consentidoAnalytics()) return;
 
   gaEvent("page_view", {
     page_path: pathname,

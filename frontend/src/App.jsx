@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { trackPageView } from "./utils/analytics";
+import CookieConsent from "./components/CookieConsent";
 
 function RouteTracker() {
   const location = useLocation();
@@ -52,6 +53,7 @@ function App() {
       <AuthProvider>
         <ScrollToTop />
         <RouteTracker />
+        <CookieConsent />
 
         <Routes>
           <Route path="/" element={<Home />} />
