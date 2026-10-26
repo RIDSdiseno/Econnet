@@ -3,12 +3,12 @@ import prisma from "../config/prisma.js";
 import { generarDocumentoPedidoPDF } from "./documentoPdfService.js";
 
 async function obtenerTokenGraph() {
-  const tenantId = process.env.MICROSOFT_TENANT_ID;
-  const clientId = process.env.MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const tenantId = process.env.GRAPH_TENANT_ID || process.env.MICROSOFT_TENANT_ID;
+  const clientId = process.env.GRAPH_CLIENT_ID;
+  const clientSecret = process.env.GRAPH_CLIENT_SECRET;
 
   if (!tenantId || !clientId || !clientSecret) {
-    throw new Error("Faltan variables MICROSOFT_TENANT_ID, MICROSOFT_CLIENT_ID o MICROSOFT_CLIENT_SECRET");
+    throw new Error("Faltan variables GRAPH_TENANT_ID, GRAPH_CLIENT_ID o GRAPH_CLIENT_SECRET");
   }
 
   const res = await fetch(
