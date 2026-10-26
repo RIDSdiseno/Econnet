@@ -1,7 +1,11 @@
 import logger, { serializeError } from "../config/logger.js";
 import nodemailer from "nodemailer";
+import dns from "dns";
+import { promisify } from "util";
 import prisma from "../config/prisma.js";
 import { generarDocumentoPedidoPDF } from "./documentoPdfService.js";
+
+const dnsLookup = promisify(dns.lookup);
 
 function obtenerConfiguracionSMTP() {
   const host = process.env.SMTP_HOST;
@@ -28,12 +32,18 @@ function obtenerConfiguracionSMTP() {
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
-    family: 4,
   };
 }
 
-function crearTransportador() {
-  return nodemailer.createTransport(obtenerConfiguracionSMTP());
+async function crearTransportador() {
+  const config = obtenerConfiguracionSMTP();
+  try {
+    const { address } = await dnsLookup(config.host, { family: 4 });
+    config.host = address;
+  } catch (_) {
+    // usa el hostname original si falla el lookup
+  }
+  return nodemailer.createTransport(config);
 }
 
 function formatearPrecio(valor) {
@@ -340,7 +350,7 @@ export async function enviarNotificacionPedidoInterno(pedido) {
   if (!destino) return;
   const cc = process.env.PEDIDOS_NOTIF_CC || "";
   try {
-    const transportador = crearTransportador();
+    const transportador = await crearTransportador();
     const items = (pedido.items || [])
       .map((i) => `• ${i.nombreProducto} x${i.cantidad} — ${formatearPrecio(i.subtotal)}`)
       .join("\n");
@@ -425,7 +435,7 @@ export async function enviarDocumentoPedidoPorCorreo(pedidoId) {
 
     const pdfBuffer = await generarDocumentoPedidoPDF(pedido);
     const nombreArchivo = obtenerNombreDocumento(pedido);
-    const transportador = crearTransportador();
+    const transportador = await crearTransportador();
 
     const info = await transportador.sendMail({
       from: {
