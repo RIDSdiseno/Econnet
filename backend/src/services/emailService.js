@@ -1,49 +1,89 @@
 import logger, { serializeError } from "../config/logger.js";
-import nodemailer from "nodemailer";
-import dns from "dns";
-import { promisify } from "util";
 import prisma from "../config/prisma.js";
 import { generarDocumentoPedidoPDF } from "./documentoPdfService.js";
 
-const dnsLookup = promisify(dns.lookup);
+async function obtenerTokenGraph() {
+  const tenantId = process.env.MICROSOFT_TENANT_ID;
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
 
-function obtenerConfiguracionSMTP() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure =
-    String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    throw new Error(
-      "Faltan las variables SMTP_HOST, SMTP_USER o SMTP_PASS",
-    );
+  if (!tenantId || !clientId || !clientSecret) {
+    throw new Error("Faltan variables MICROSOFT_TENANT_ID, MICROSOFT_CLIENT_ID o MICROSOFT_CLIENT_SECRET");
   }
 
-  return {
-    host,
-    port,
-    secure,
-    auth: {
-      user,
-      pass,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  };
+  const res = await fetch(
+    `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: "https://graph.microsoft.com/.default",
+      }),
+    }
+  );
+  const data = await res.json();
+  if (!data.access_token) {
+    throw new Error(`Error obteniendo token Graph: ${JSON.stringify(data)}`);
+  }
+  return data.access_token;
 }
 
-async function crearTransportador() {
-  const config = obtenerConfiguracionSMTP();
-  try {
-    const { address } = await dnsLookup(config.host, { family: 4 });
-    config.host = address;
-  } catch (_) {
-    // usa el hostname original si falla el lookup
+function toRecipientList(addresses) {
+  if (!addresses) return [];
+  const list = Array.isArray(addresses) ? addresses : [addresses];
+  return list
+    .map((a) => (typeof a === "string" ? a : a.address))
+    .filter(Boolean)
+    .map((address) => ({ emailAddress: { address } }));
+}
+
+async function enviarCorreoConGraph({ from, to, cc, subject, text, html, attachments = [] }) {
+  const token = await obtenerTokenGraph();
+  const sender = process.env.EMAIL_FROM || (typeof from === "string" ? from : from.address);
+
+  const message = {
+    subject,
+    body: {
+      contentType: html ? "HTML" : "Text",
+      content: html || text,
+    },
+    toRecipients: toRecipientList(to),
+    ...(cc ? { ccRecipients: toRecipientList(cc) } : {}),
+    ...(attachments.length > 0
+      ? {
+          attachments: attachments.map((att) => ({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: att.filename,
+            contentType: att.contentType || "application/octet-stream",
+            contentBytes: Buffer.isBuffer(att.content)
+              ? att.content.toString("base64")
+              : Buffer.from(att.content).toString("base64"),
+          })),
+        }
+      : {}),
+  };
+
+  const res = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(sender)}/sendMail`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message, saveToSentItems: false }),
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Graph API error ${res.status}: ${errBody}`);
   }
-  return nodemailer.createTransport(config);
+
+  return { messageId: res.headers.get("request-id") };
 }
 
 function formatearPrecio(valor) {
@@ -350,12 +390,11 @@ export async function enviarNotificacionPedidoInterno(pedido) {
   if (!destino) return;
   const cc = process.env.PEDIDOS_NOTIF_CC || "";
   try {
-    const transportador = await crearTransportador();
     const items = (pedido.items || [])
       .map((i) => `• ${i.nombreProducto} x${i.cantidad} — ${formatearPrecio(i.subtotal)}`)
       .join("\n");
-    await transportador.sendMail({
-      from: { name: process.env.EMAIL_FROM_NAME || "Econnet", address: process.env.EMAIL_FROM || process.env.SMTP_USER },
+    await enviarCorreoConGraph({
+      from: { name: process.env.EMAIL_FROM_NAME || "Econnet", address: process.env.EMAIL_FROM },
       to: destino,
       ...(cc ? { cc } : {}),
       subject: `Nuevo pedido pagado: ${pedido.numero} — ${formatearPrecio(pedido.total)}`,
@@ -435,12 +474,11 @@ export async function enviarDocumentoPedidoPorCorreo(pedidoId) {
 
     const pdfBuffer = await generarDocumentoPedidoPDF(pedido);
     const nombreArchivo = obtenerNombreDocumento(pedido);
-    const transportador = await crearTransportador();
 
-    const info = await transportador.sendMail({
+    const info = await enviarCorreoConGraph({
       from: {
         name: process.env.EMAIL_FROM_NAME || "Econnet",
-        address: process.env.EMAIL_FROM || process.env.SMTP_USER,
+        address: process.env.EMAIL_FROM,
       },
 
       to: pedido.emailCliente,
