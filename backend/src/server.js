@@ -63,6 +63,7 @@ const origenesPermitidos = [
   "http://localhost:5173",
   "https://econnet-store.netlify.app",
   "https://econnet.cl",
+  "https://www.econnet.cl",
   process.env.FRONTEND_URL,
 ]
   .filter(Boolean)
