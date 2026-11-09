@@ -209,6 +209,18 @@ function PoliticasPrivacidad() {
             <p>Ejercer estos derechos es gratis.</p>
           </Seccion>
 
+          <Seccion titulo="8b. Datos obligatorios y voluntarios">
+            <p>
+              En el formulario de registro y en el checkout señalamos cuáles campos son obligatorios (*).
+              Si no los proporcionas, no podremos crear tu cuenta, procesar tu pedido o prestarte el servicio solicitado.
+              Los campos sin asterisco son voluntarios y su no entrega no afecta el servicio principal.
+            </p>
+            <p>
+              Al usar el inicio de sesión con Google o Microsoft, esas plataformas nos entregan tu nombre y
+              correo automáticamente. No recibimos tu contraseña ni ningún dato adicional sin tu autorización.
+            </p>
+          </Seccion>
+
           <Seccion titulo="9. Menores de edad">
             <p>
               El sitio está dirigido a personas mayores de 18 años y a empresas. No recopilamos

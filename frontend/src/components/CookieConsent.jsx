@@ -69,6 +69,10 @@ function guardarConsentimiento(aceptado) {
   } catch (_) {}
 }
 
+export function reabrirBannerCookies() {
+  window.dispatchEvent(new CustomEvent("econnet:reopen-cookies"));
+}
+
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
@@ -85,9 +89,14 @@ export default function CookieConsent() {
         return;
       }
     } catch (_) {}
-    // Sin consentimiento previo: mostrar banner tras 1 segundo
     const t = setTimeout(() => setVisible(true), 1000);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setVisible(true);
+    window.addEventListener("econnet:reopen-cookies", handler);
+    return () => window.removeEventListener("econnet:reopen-cookies", handler);
   }, []);
 
   const aceptar = () => {
@@ -131,7 +140,8 @@ export default function CookieConsent() {
             </button>
             <button
               onClick={aceptar}
-              className="flex-1 py-3 text-sm font-bold bg-gray-900 text-white rounded-xl hover:bg-black transition-colors"
+              className="flex-1 py-3 text-sm font-bold bg-gray-900 !text-white rounded-xl hover:bg-black transition-colors"
+            style={{ color: "#ffffff" }}
             >
               Aceptar todo
             </button>

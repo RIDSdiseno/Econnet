@@ -14,30 +14,37 @@ const {
   TransactionDetail,
 } = transbankSdk;
 
+function esProduccion() {
+  return process.env.WEBPAY_ENV === "production";
+}
+
 function crearTransaccionWebpay() {
+  const prod = esProduccion();
   return new WebpayPlus.Transaction(
     new Options(
-      IntegrationCommerceCodes.WEBPAY_PLUS,
-      IntegrationApiKeys.WEBPAY,
-      Environment.Integration
+      prod ? process.env.WEBPAY_COMMERCE_CODE : IntegrationCommerceCodes.WEBPAY_PLUS,
+      prod ? process.env.WEBPAY_API_KEY : IntegrationApiKeys.WEBPAY,
+      prod ? Environment.Production : Environment.Integration
     )
   );
 }
 
 function crearTransaccionOneclick() {
+  const prod = esProduccion();
   return new Oneclick.MallTransaction(
     new Options(
-      IntegrationCommerceCodes.ONECLICK_MALL,
-      IntegrationApiKeys.WEBPAY,
-      Environment.Integration
+      prod ? process.env.ONECLICK_COMMERCE_CODE : IntegrationCommerceCodes.ONECLICK_MALL,
+      prod ? process.env.ONECLICK_API_KEY : IntegrationApiKeys.WEBPAY,
+      prod ? Environment.Production : Environment.Integration
     )
   );
 }
 
 function obtenerCommerceCodeHijoOneclick() {
-  return (
-    process.env.TRANSBANK_ONECLICK_CHILD_COMMERCE_CODE || "597055555542"
-  );
+  const prod = esProduccion();
+  return prod
+    ? (process.env.ONECLICK_CHILD_COMMERCE_CODE || "")
+    : (process.env.TRANSBANK_ONECLICK_CHILD_COMMERCE_CODE || "597055555542");
 }
 
 function generarOrdenCompraOneclick(pedidoId) {

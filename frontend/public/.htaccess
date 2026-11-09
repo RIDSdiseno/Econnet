@@ -1,0 +1,40 @@
+Options -MultiViews
+RewriteEngine On
+
+# HTTP → HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Cabeceras de seguridad
+<IfModule mod_headers.c>
+  # HSTS (1 año, incluye subdominios)
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+  # Evita que el navegador adivine el tipo de contenido
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Evita que el sitio sea embebido en iframes externos
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # Política de referrer
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Permisos del navegador
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+  # Content Security Policy básica
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # Cross-Origin Opener Policy
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+
+  # Content Security Policy
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://econnet-production.up.railway.app https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.clarity.ms https://www.facebook.com https://login.microsoftonline.com; frame-src 'self' https://td.doubleclick.net https://webpay3g.transbank.cl https://www.mercadopago.cl;"
+</IfModule>
+
+# SPA: permitir archivos físicos (sitemap.xml, robots.txt, img/, assets/, etc.)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Todo lo demás → index.html
+RewriteRule ^ index.html [QSA,L]

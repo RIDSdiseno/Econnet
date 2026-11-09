@@ -6,6 +6,7 @@ import {
   CustomerServiceOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { reabrirBannerCookies } from "./CookieConsent";
 
 const redesSociales = {
   instagram: "https://www.instagram.com/econnet.cl/",
@@ -198,6 +199,15 @@ function Footer() {
         <div className="border-t border-gray-700 mt-10 pt-6 text-center text-sm text-gray-400 space-y-1">
           <p>Econnet SpA · RUT 76.758.352-4 · La Concepción 65, of. 1003, Providencia, Santiago</p>
           <p>Copyright © 2026 Econnet.cl. Todos los derechos reservados.</p>
+          <p>
+            <button
+              type="button"
+              onClick={reabrirBannerCookies}
+              className="underline hover:text-gray-200 transition bg-transparent border-none text-gray-400 text-sm cursor-pointer"
+            >
+              Gestionar preferencias de cookies
+            </button>
+          </p>
         </div>
       </div>
 

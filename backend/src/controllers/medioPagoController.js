@@ -11,11 +11,12 @@ const {
 } = transbankSdk;
 
 function crearInscripcionOneclick() {
+    const prod = process.env.WEBPAY_ENV === "production";
     return new Oneclick.MallInscription(
         new Options(
-            IntegrationCommerceCodes.ONECLICK_MALL,
-            IntegrationApiKeys.WEBPAY,
-            Environment.Integration,
+            prod ? process.env.ONECLICK_COMMERCE_CODE : IntegrationCommerceCodes.ONECLICK_MALL,
+            prod ? process.env.ONECLICK_API_KEY : IntegrationApiKeys.WEBPAY,
+            prod ? Environment.Production : Environment.Integration,
         ),
     );
 }
