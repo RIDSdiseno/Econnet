@@ -58,7 +58,16 @@ function enviarDocumentoMercadoPagoEnSegundoPlano(pedidoId, pedido) {
         return;
     }
 
-    if (pedido) enviarNotificacionPedidoInterno(pedido).catch(() => {});
+    if (pedido) {
+        enviarNotificacionPedidoInterno(pedido).catch(() => {});
+    } else {
+        prisma.pedido.findUnique({
+            where: { id: Number(pedidoId) },
+            include: { items: true },
+        }).then((p) => {
+            if (p) enviarNotificacionPedidoInterno(p).catch(() => {});
+        }).catch(() => {});
+    }
 
     enviarDocumentoPedidoPorCorreo(pedidoId)
         .then((resultado) => {
