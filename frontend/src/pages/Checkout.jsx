@@ -137,7 +137,7 @@ function Checkout() {
   const [datos, setDatos] = useState({
     direccionId: "",
     tipoEntrega: "despacho",
-    metodoPago: "webpay",
+    metodoPago: "mercadopago",
     documento: "boleta",
   });
 
@@ -1154,24 +1154,7 @@ const obtenerUrlPagoMercadoPago = (respuesta) => {
                 className="w-full"
               >
                 <div className="space-y-4">
-                  {/* Webpay */}
-                  <label
-                    className={`block border rounded-2xl p-5 cursor-pointer transition ${
-                      datos.metodoPago === "webpay"
-                        ? "border-gray-950 bg-gray-50"
-                        : "border-gray-200 bg-white hover:bg-gray-50"
-                    }`}
-                  >
-                    <Radio value="webpay">
-                      <span className="font-black text-gray-900">
-                        Webpay / Tarjeta
-                      </span>
-                    </Radio>
-
-                    <p className="text-sm text-gray-600 mt-2 ml-6">
-                      Pago con tarjeta de débito o crédito mediante Webpay.
-                    </p>
-                  </label>
+                  {/* Webpay deshabilitado temporalmente */}
 
                   {estaLogueado && (
                     <>
